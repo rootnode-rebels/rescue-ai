@@ -17,35 +17,15 @@ export const ChatLayout: React.FC = () => {
     {
       id: "1",
       sender: "bot",
-      text: "Hello 👋\nI am your RescueAI Emergency Assistant. I can help you with real-time safety guidance, evacuation steps, nearby shelters, and emergency numbers.",
+      text: "Hello 👋\nI am your RescueAI Emergency Assistant powered by Google Gemini 1.5. Ask me for real-time flood, fire, or earthquake survival protocols, nearby shelter status, or emergency medical guidance.",
       timestamp: "Just now",
-    },
-    {
-      id: "2",
-      sender: "user",
-      text: "What should I do during a flood?",
-      timestamp: "Just now",
-    },
-    {
-      id: "3",
-      sender: "bot",
-      text: "Flood Survival Protocol – Follow these immediate safety steps:",
-      timestamp: "Just now",
-      steps: [
-        "Move to higher ground or upper building floors immediately. Avoid basements and low-lying ground.",
-        "Disconnect electrical appliances and main breaker if safe to do so. Never touch electrical equipment in standing water.",
-        "Do NOT walk, swim, or drive through flood waters. 6 inches of moving water can knock you down.",
-        "Keep your mobile phone charged and enable location permissions for RescueAI satellite dispatch.",
-        "If trapped, signal for help using a bright cloth, flashlight, or tap the Red SOS button on RescueAI.",
-      ],
-      callout: "Emergency Operations Center (EOC) #112 is monitoring Bay Area Sectors 3-8.",
     },
   ];
 
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isTyping, setIsTyping] = useState<boolean>(false);
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: "user",
@@ -53,13 +33,40 @@ export const ChatLayout: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    const updated = [...messages, userMsg];
-    setMessages(updated);
+    setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
 
-    // Simulate AI Generator
-    setTimeout(() => {
-      let botReply = "Stay calm! RescueAI is analyzing your location telemetry to provide verified safety protocols.";
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "https://rescueai-backend-3u2o.onrender.com/api";
+      const response = await fetch(`${backendUrl}/triage/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: text }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const botMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: "bot",
+          text: `[Priority Level: ${data.priority || "HIGH"}] — ${data.summary}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          steps: data.survival_guidance && data.survival_guidance.length > 0
+            ? data.survival_guidance
+            : [
+                "Move to higher ground immediately if in a flood zone.",
+                "Keep mobile phone charged and enable location telemetry for RescueAI.",
+                "If trapped, tap the Emergency SOS button in your RescueAI app.",
+              ],
+          callout: `Emergency Category: ${data.category || "GENERAL"} | Recommended Action: ${data.recommended_action || "Dispatch Nearest Unit"}`,
+        };
+        setMessages((prev) => [...prev, botMsg]);
+      } else {
+        throw new Error("FastAPI Triage response error");
+      }
+    } catch (err) {
+      console.warn("FastAPI offline fallback:", err);
+      let botReply = "Stay calm! RescueAI is analyzing your input to provide verified safety protocols.";
       let steps: string[] | undefined = undefined;
       let callout: string | undefined = undefined;
 
@@ -80,12 +87,12 @@ export const ChatLayout: React.FC = () => {
           "Feel doors before opening – if hot, use an alternate escape route.",
           "Call Fire Department immediately at 101.",
         ];
-      } else if (lower.includes("shelter")) {
-        botReply = "Evacuation Shelter Status near San Francisco:";
+      } else {
+        botReply = "Emergency Response Protocol:";
         steps = [
-          "Central High School Shelter (0.8 mi) – 65% Full [OPEN]",
-          "City Arena Hall (1.4 mi) – 40% Full [OPEN]",
-          "North Medical Center (2.1 mi) – 82% Full [OPEN]",
+          "Move to a safe, elevated location away from immediate danger.",
+          "Maintain contact with local emergency authorities via #112.",
+          "Keep your RescueAI app open for live GPS tracking.",
         ];
       }
 
@@ -97,10 +104,10 @@ export const ChatLayout: React.FC = () => {
         steps,
         callout,
       };
-
       setMessages((prev) => [...prev, botMsg]);
+    } finally {
       setIsTyping(false);
-    }, 900);
+    }
   };
 
   const handleClearChat = () => {

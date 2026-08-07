@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../dashboard/Sidebar";
 import { TopNavbar } from "../dashboard/TopNavbar";
 import { IncidentCard } from "../ui/IncidentCard";
@@ -17,6 +17,7 @@ import {
   Building,
 } from "lucide-react";
 import { SOSRequest, SOSStatus } from "@/types";
+import { getPendingOfflineSOS } from "@/lib/dexie-db";
 
 const MOCK_SOS_QUEUE: SOSRequest[] = [
   {
@@ -56,7 +57,7 @@ const MOCK_SOS_QUEUE: SOSRequest[] = [
     status: "PENDING",
     peopleCount: 2,
     medicalNeeds: false,
-    aiSummary: "Structural collapse blocking exit. No active fires reported. Heavy debris clearance team needed.",
+    aiSummary: "Structural collapse blocking exit. Heavy debris clearance team needed.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -78,7 +79,7 @@ const MOCK_SOS_QUEUE: SOSRequest[] = [
     assignedTeamName: "NDRF Unit 4 - Sector Fire Response",
     peopleCount: 6,
     medicalNeeds: true,
-    aiSummary: "Toxic smoke hazard. Unit 4 dispatched with breathing apparatus and thermal imaging.",
+    aiSummary: "Toxic smoke hazard. Unit 4 dispatched with breathing apparatus.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -88,6 +89,44 @@ export const RescueDashboardLayout: React.FC = () => {
   const [requests, setRequests] = useState<SOSRequest[]>(MOCK_SOS_QUEUE);
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const fetchLiveSOSQueue = useCallback(async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch from live FastAPI backend if online
+      if (navigator.onLine) {
+        const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "https://rescueai-backend-3u2o.onrender.com/api";
+        const res = await fetch(`${backendUrl}/sos`);
+        if (res.ok) {
+          const apiData = await res.json();
+          if (Array.isArray(apiData) && apiData.length > 0) {
+            setRequests(apiData);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Fallback: load offline IndexedDB requests + mock queue
+      const offlineItems = await getPendingOfflineSOS();
+      if (offlineItems.length > 0) {
+        const combined = [...offlineItems, ...MOCK_SOS_QUEUE];
+        setRequests(combined);
+      } else {
+        setRequests(MOCK_SOS_QUEUE);
+      }
+    } catch (err) {
+      console.warn("Error fetching live SOS queue:", err);
+      setRequests(MOCK_SOS_QUEUE);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveSOSQueue();
+  }, [fetchLiveSOSQueue]);
 
   const handleAcceptRequest = (id: string) => {
     setRequests((prev) =>
@@ -156,11 +195,12 @@ export const RescueDashboardLayout: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setRequests([...MOCK_SOS_QUEUE])}
-              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all self-start sm:self-auto"
+              onClick={fetchLiveSOSQueue}
+              disabled={loading}
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all self-start sm:self-auto disabled:opacity-50"
             >
-              <RefreshCw className="w-4 h-4 text-red-500" />
-              <span>Refresh Queue</span>
+              <RefreshCw className={`w-4 h-4 text-red-500 ${loading ? "animate-spin" : ""}`} />
+              <span>{loading ? "Updating..." : "Refresh Queue"}</span>
             </button>
           </div>
 
@@ -268,7 +308,7 @@ export const RescueDashboardLayout: React.FC = () => {
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                    Incident Map & Sector Grid
+                    Incident Map &amp; Sector Grid
                   </h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-950 text-red-400 border border-red-800">
                     LIVE TELEMETRY

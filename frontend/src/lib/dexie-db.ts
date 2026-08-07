@@ -23,6 +23,10 @@ export async function saveLocalSOS(sos: SOSRequest): Promise<string> {
   return await db.sosRequests.put(sos);
 }
 
+export async function saveOfflineSOS(sos: SOSRequest): Promise<string> {
+  return await saveLocalSOS(sos);
+}
+
 export async function getPendingOfflineSOS(): Promise<SOSRequest[]> {
   return await db.sosRequests.filter(item => Boolean(item.isOfflineCreated)).toArray();
 }
