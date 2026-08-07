@@ -14,7 +14,19 @@ export interface UserProfile {
   status: "active" | "suspended" | "pending" | "pending_approval";
 }
 
-export type SOSStatus = "Pending" | "Accepted" | "Team On The Way" | "Reached" | "Completed" | "Rejected" | "PENDING" | "ACCEPTED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type SOSStatus =
+  | "Pending"
+  | "Accepted"
+  | "Team On The Way"
+  | "Reached"
+  | "Completed"
+  | "Rejected"
+  | "PENDING"
+  | "ACCEPTED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
+
 export type SOSPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export interface SOSLocation {
@@ -63,7 +75,7 @@ export interface RegisterFormData {
   phone: string;
   password: string;
   confirmPassword?: string;
-  role: UserRole;
+  role?: UserRole;
   organization?: string;
   badgeNumber?: string;
   acceptTerms?: boolean;

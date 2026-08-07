@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -14,23 +15,15 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
-  Building2,
-  BadgeCheck,
-  Ambulance,
-  Building,
-  HeartHandshake,
-  CheckCircle2,
-  Clock,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { RegisterFormData, UserRole } from "@/types/auth";
+import { RegisterFormData } from "@/types/auth";
 import { getRoleDashboard } from "./ProtectedRoute";
 
 export const RegisterForm: React.FC = () => {
   const { register, loginWithGoogle } = useAuth();
   const router = useRouter();
 
-  const [regMode, setRegMode] = useState<"citizen" | "official">("citizen");
   const [formData, setFormData] = useState<RegisterFormData>({
     name: "",
     email: "",
@@ -38,8 +31,6 @@ export const RegisterForm: React.FC = () => {
     password: "",
     confirmPassword: "",
     role: "citizen",
-    organization: "",
-    badgeNumber: "",
     acceptTerms: false,
   });
 
@@ -47,7 +38,6 @@ export const RegisterForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof RegisterFormData, string>> = {};
@@ -76,15 +66,6 @@ export const RegisterForm: React.FC = () => {
       newErrors.confirmPassword = "Passwords do not match.";
     }
 
-    if (regMode === "official") {
-      if (!formData.organization?.trim()) {
-        newErrors.organization = "Organization / Battalion name is required for official roles.";
-      }
-      if (!formData.badgeNumber?.trim()) {
-        newErrors.badgeNumber = "Official Badge / ID Number is required for verification.";
-      }
-    }
-
     if (!formData.acceptTerms) {
       newErrors.acceptTerms = "You must accept the Emergency Services Terms.";
     }
@@ -99,19 +80,13 @@ export const RegisterForm: React.FC = () => {
 
     setLoading(true);
     setErrors({});
-    setPendingNotice(null);
 
     try {
-      const profile = await register(formData);
+      // Force role = "citizen" for public registration
+      const profile = await register({ ...formData, role: "citizen" });
       if (profile) {
-        if (regMode === "official") {
-          setPendingNotice(
-            `Official application for "${formData.name}" (${formData.role.toUpperCase()}) submitted successfully! Your account is in "Pending Super Admin Approval" queue.`
-          );
-        } else {
-          const targetDashboard = getRoleDashboard(profile.role);
-          router.push(targetDashboard);
-        }
+        const targetDashboard = getRoleDashboard(profile.role);
+        router.push(targetDashboard);
       }
     } catch (err: unknown) {
       console.error("Registration error:", err);
@@ -135,7 +110,7 @@ export const RegisterForm: React.FC = () => {
     setErrors({});
 
     try {
-      const profile = await loginWithGoogle(regMode === "official" ? formData.role : "citizen");
+      const profile = await loginWithGoogle("citizen");
       if (profile) {
         const targetDashboard = getRoleDashboard(profile.role);
         router.push(targetDashboard);
@@ -163,62 +138,20 @@ export const RegisterForm: React.FC = () => {
             <ShieldAlert className="w-8 h-8" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900">
-            Account <span className="text-red-600">Registration</span>
+            Citizen <span className="text-red-600">Registration</span>
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 font-medium mt-2 max-w-md mx-auto">
-            Create a Citizen Account or submit an Official Responder Application.
+            Create an emergency account to send SOS alerts and access nearby disaster shelters.
           </p>
         </div>
 
-        {/* Mode Selector Tabs */}
-        <div className="flex items-center p-1 bg-gray-100 rounded-2xl mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setRegMode("citizen");
-              setFormData((prev) => ({ ...prev, role: "citizen" }));
-            }}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
-              regMode === "citizen"
-                ? "bg-red-600 text-white shadow-md shadow-red-950"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Citizen Account
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setRegMode("official");
-              setFormData((prev) => ({ ...prev, role: "rescue" }));
-            }}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
-              regMode === "official"
-                ? "bg-red-600 text-white shadow-md shadow-red-950"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Official Agency / Volunteer
-          </button>
+        {/* Notice for Official Accounts */}
+        <div className="mb-6 p-4 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 flex items-start gap-3 text-xs">
+          <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <strong className="text-white">Official Rescue Admins:</strong> Rescue Admin accounts are provisioned exclusively by Global Admins via the Super Admin Dashboard.
+          </p>
         </div>
-
-        {/* Official Pending Application Alert */}
-        {pendingNotice && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs font-semibold flex items-start gap-3 shadow-xs">
-            <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <span>{pendingNotice}</span>
-          </div>
-        )}
-
-        {/* Super Admin Review Note for Official Mode */}
-        {regMode === "official" && !pendingNotice && (
-          <div className="mb-6 p-4 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800 flex items-start gap-3 text-xs">
-            <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong className="text-white">Super Admin Approval Required:</strong> Official Responder accounts (Rescue Teams, Volunteers, Hospitals, NGOs) require authorization by a Super Admin before full access is granted.
-            </p>
-          </div>
-        )}
 
         {/* General Error Banner */}
         {errors.general && (
@@ -232,41 +165,6 @@ export const RegisterForm: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Official Role Selector for Official Mode */}
-        {regMode === "official" && (
-          <div className="mb-6">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
-              Select Official Role Category:
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { id: "rescue", title: "Rescue Team", icon: Ambulance },
-                { id: "authority", title: "Authority / EOC", icon: ShieldCheck },
-                { id: "hospital", title: "Hospital Triage", icon: Building },
-                { id: "ngo", title: "NGO / Relief", icon: HeartHandshake },
-              ].map((item) => {
-                const IconComp = item.icon;
-                const isSelected = formData.role === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: item.id as UserRole })}
-                    className={`p-3 rounded-2xl border flex flex-col items-center text-center transition-all ${
-                      isSelected
-                        ? "border-red-600 bg-red-50 text-red-900 font-extrabold ring-2 ring-red-500/30"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <IconComp className={`w-5 h-5 mb-1 ${isSelected ? "text-red-600" : "text-gray-500"}`} />
-                    <span className="text-xs">{item.title}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Full Name */}
@@ -278,7 +176,7 @@ export const RegisterForm: React.FC = () => {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={regMode === "official" ? "Commander Sarah Jenkins" : "John Doe"}
+                placeholder="Jane Doe"
                 disabled={loading}
                 className="w-full h-12 pl-11 pr-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:outline-none focus:border-red-500 font-medium"
               />
@@ -296,7 +194,7 @@ export const RegisterForm: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="responder@rescueai.gov"
+                  placeholder="citizen@rescueai.org"
                   disabled={loading}
                   className="w-full h-12 pl-11 pr-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:outline-none focus:border-red-500 font-medium"
                 />
@@ -320,47 +218,6 @@ export const RegisterForm: React.FC = () => {
               {errors.phone && <p className="mt-1 text-xs font-semibold text-red-500">{errors.phone}</p>}
             </div>
           </div>
-
-          {/* Conditional Official Fields */}
-          {regMode === "official" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Organization / Unit</label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 text-gray-400 absolute left-4 top-4" />
-                  <input
-                    type="text"
-                    value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                    placeholder="NDRF Fire Battalion 4"
-                    disabled={loading}
-                    className="w-full h-12 pl-11 pr-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:outline-none focus:border-red-500 font-medium"
-                  />
-                </div>
-                {errors.organization && (
-                  <p className="mt-1 text-xs font-semibold text-red-500">{errors.organization}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Official Badge / ID</label>
-                <div className="relative">
-                  <BadgeCheck className="w-4 h-4 text-gray-400 absolute left-4 top-4" />
-                  <input
-                    type="text"
-                    value={formData.badgeNumber}
-                    onChange={(e) => setFormData({ ...formData, badgeNumber: e.target.value })}
-                    placeholder="BADGE-NDRF-9081"
-                    disabled={loading}
-                    className="w-full h-12 pl-11 pr-4 bg-gray-50 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:outline-none focus:border-red-500 font-medium"
-                  />
-                </div>
-                {errors.badgeNumber && (
-                  <p className="mt-1 text-xs font-semibold text-red-500">{errors.badgeNumber}</p>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Password & Confirm Password */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -439,15 +296,11 @@ export const RegisterForm: React.FC = () => {
             {loading ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Submitting Application...</span>
+                <span>Creating Account...</span>
               </>
             ) : (
               <>
-                <span>
-                  {regMode === "official"
-                    ? `Submit ${formData.role.toUpperCase()} Application for Approval`
-                    : "Register Citizen Account"}
-                </span>
+                <span>Register Citizen Account</span>
                 <ArrowRight className="w-4 h-4 text-white" />
               </>
             )}

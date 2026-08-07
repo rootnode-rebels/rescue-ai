@@ -6,7 +6,7 @@ import { RescueDashboardLayout } from "@/components/rescue/RescueDashboardLayout
 
 export default function RescueTeamDashboardPage() {
   return (
-    <ProtectedRoute allowedRoles={["rescue", "authority", "hospital", "ngo"]}>
+    <ProtectedRoute allowedRoles={["rescue_admin", "rescue", "authority", "hospital", "ngo"]}>
       <RescueDashboardLayout />
     </ProtectedRoute>
   );

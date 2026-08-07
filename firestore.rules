@@ -1,15 +1,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /sos/{docId} {
-      allow read: if request.auth != null && (request.auth.token.role == 'rescue_officer' || request.auth.token.role == 'eoc');
-      allow create: if true;  // allow any client to create for demo
-      allow update: if request.auth != null && (request.auth.token.role == 'rescue_officer' || request.auth.token.role == 'eoc');
+    
+    function isAuthenticated() {
+      return request.auth != null;
     }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isGlobalAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'global_admin' ||
+        request.auth.token.email in [
+          'adhibasavanal@gmail.com',
+          'akshathch567@gmail.com',
+          'akash191112@gmail.com',
+          'akashakashr505@gmail.com'
+        ]
+      );
+    }
+    
+    function isRescueAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'rescue_admin' ||
+        getUserData().role == 'rescue' ||
+        isGlobalAdmin()
+      );
+    }
+
+    // Users Collection
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if true;
+      allow read: if isAuthenticated();
+      // Allow user to create initial document for themselves
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Allow user to update non-role fields; only Global Admin can update role
+      allow update: if isAuthenticated() && (
+        isGlobalAdmin() || (
+          request.auth.uid == userId &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+        )
+      );
+      allow delete: if isGlobalAdmin();
     }
-    match /{document=**} { allow read, write: if false; } // lock down others
+
+    // Real-Time SOS Requests Collection
+    match /sos_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isRescueAdmin() || resource.data.uid == request.auth.uid);
+      allow delete: if isGlobalAdmin();
+    }
+    
+    match /sos/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isRescueAdmin();
+      allow delete: if isGlobalAdmin();
+    }
   }
 }

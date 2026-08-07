@@ -21,7 +21,8 @@ const USERS_COLLECTION = "users";
 const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
- * Super Admin Authorized Whitelist Emails
+ * Super Admin Authorized Bootstrap Emails
+ * Used ONLY when creating initial user documents if no document exists yet.
  */
 export const SUPER_ADMIN_EMAILS = [
   "adhibasavanal@gmail.com",
@@ -36,7 +37,7 @@ export function isSuperAdminEmail(email?: string | null): boolean {
 }
 
 /**
- * Saves user profile to localStorage for persistent sessions across page reloads & app restarts.
+ * Saves user profile to localStorage for persistent client session cache.
  */
 function saveProfileToLocalStorage(profile: UserProfile): void {
   try {
@@ -62,8 +63,8 @@ function clearProfileFromLocalStorage(): void {
 }
 
 /**
- * Fetches user profile from Firestore by UID or fallback to localStorage.
- * Preserves stored user role (citizen, rescue_admin, global_admin).
+ * Fetches user profile strictly from Firestore `users/{uid}` document.
+ * NEVER alters or overwrites the stored role based on email.
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
@@ -95,8 +96,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 /**
- * Registers a new user with Email & Password.
- * Preserves selected role (citizen -> Citizen Dashboard, rescue_admin -> Rescue Dashboard).
+ * Registers a new Citizen account.
+ * Public users ALWAYS get role = "citizen".
+ * Users can NEVER register themselves as rescue_admin or global_admin.
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -105,8 +107,9 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
   await updateProfile(user, { displayName: data.name });
 
-  const assignedRole: UserRole = data.role || "citizen";
   const now = new Date().toISOString();
+  // Public registration is ALWAYS citizen
+  const assignedRole: UserRole = "citizen";
 
   const newProfile: UserProfile = {
     uid: user.uid,
@@ -114,18 +117,18 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
     email: data.email,
     phone: data.phone || "",
     role: assignedRole,
-    organization: data.organization || "",
-    badgeNumber: data.badgeNumber || "",
+    organization: "",
+    badgeNumber: "",
     photoURL: user.photoURL || null,
     createdAt: now,
     lastLogin: now,
-    status: assignedRole === "citizen" || assignedRole === "global_admin" ? "active" : "pending_approval",
+    status: "active",
   };
 
   try {
     await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
   } catch (err) {
-    console.warn("Firestore permission error when creating user document:", err);
+    console.warn("Firestore error when creating user document:", err);
   }
 
   saveProfileToLocalStorage(newProfile);
@@ -133,7 +136,9 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 }
 
 /**
- * Signs in user with Email & Password using browserLocalPersistence.
+ * Signs in user with Email & Password.
+ * Reads existing profile from Firestore users/{uid} document.
+ * Routes strictly based on Firestore document role.
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -144,6 +149,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   let profile = await getUserProfile(user.uid);
 
   if (profile) {
+    // Update lastLogin timestamp without mutating the role
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
         lastLogin: now,
@@ -153,13 +159,16 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
     profile.lastLogin = now;
   } else {
+    // Initial document creation if missing in Firestore
     const isSuperAdmin = isSuperAdminEmail(data.email);
+    const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
+
     profile = {
       uid: user.uid,
       name: user.displayName || "User",
       email: user.email || data.email,
       phone: user.phoneNumber || "",
-      role: isSuperAdmin ? "global_admin" : "citizen",
+      role: initialRole,
       organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
       badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
       photoURL: user.photoURL || null,
@@ -167,6 +176,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       lastLogin: now,
       status: "active",
     };
+
     try {
       await setDoc(doc(db, USERS_COLLECTION, user.uid), profile);
     } catch (err) {
@@ -180,8 +190,9 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 
 /**
  * Signs in or registers user via Google Authentication.
+ * Reads existing profile from Firestore users/{uid} document.
  */
-export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Promise<UserProfile> {
+export async function loginWithGoogle(): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
   const userCredential = await signInWithPopup(auth, googleProvider);
   const user = userCredential.user;
@@ -191,13 +202,14 @@ export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Prom
 
   if (!profile) {
     const isSuperAdmin = isSuperAdminEmail(user.email);
-    const assignedRole: UserRole = isSuperAdmin ? "global_admin" : requestedRole;
+    const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
+
     profile = {
       uid: user.uid,
       name: user.displayName || "Google User",
       email: user.email || "",
       phone: user.phoneNumber || "",
-      role: assignedRole,
+      role: initialRole,
       organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
       badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
       photoURL: user.photoURL || null,
@@ -222,6 +234,37 @@ export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Prom
   }
 
   saveProfileToLocalStorage(profile);
+  return profile;
+}
+
+/**
+ * Provisions a Rescue Admin account.
+ * Allowed ONLY by Global Admin from /admin console.
+ */
+export async function provisionRescueAdminProfile(
+  uid: string,
+  name: string,
+  email: string,
+  phone: string,
+  organization: string,
+  badgeNumber: string
+): Promise<UserProfile> {
+  const now = new Date().toISOString();
+  const profile: UserProfile = {
+    uid,
+    name,
+    email,
+    phone,
+    role: "rescue_admin",
+    organization,
+    badgeNumber,
+    photoURL: null,
+    createdAt: now,
+    lastLogin: now,
+    status: "active",
+  };
+
+  await setDoc(doc(db, USERS_COLLECTION, uid), profile);
   return profile;
 }
 
