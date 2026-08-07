@@ -11,7 +11,14 @@ service cloud.firestore {
         request.auth.token.email in [
           'adhiam@outlook.in',
           'akashakashr505@gmail.com',
-          'adhibasavanal@gmail.com',
+          'adhibasavanal@gmail.com'
+        ]
+      );
+    }
+
+    function isRescueAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email in [
           'akshathch567@gmail.com',
           'akash191112@gmail.com'
         ]

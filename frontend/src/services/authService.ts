@@ -28,12 +28,18 @@ const USERS_COLLECTION = "users";
 const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
- * Super Admin Authorized Bootstrap Emails
+ * Global Super Admin Authorized Whitelist
  */
 export const SUPER_ADMIN_EMAILS = [
   "adhiam@outlook.in",
   "akashakashr505@gmail.com",
   "adhibasavanal@gmail.com",
+];
+
+/**
+ * Rescue Admin Authorized Whitelist
+ */
+export const RESCUE_ADMIN_EMAILS = [
   "akshathch567@gmail.com",
   "akash191112@gmail.com",
 ];
@@ -41,6 +47,19 @@ export const SUPER_ADMIN_EMAILS = [
 export function isSuperAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   return SUPER_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+export function isRescueAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return RESCUE_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+export function getBootstrapRole(email?: string | null): UserRole {
+  if (!email) return "citizen";
+  const clean = email.trim().toLowerCase();
+  if (SUPER_ADMIN_EMAILS.includes(clean)) return "global_admin";
+  if (RESCUE_ADMIN_EMAILS.includes(clean)) return "rescue_admin";
+  return "citizen";
 }
 
 /**
@@ -126,7 +145,7 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
   await updateProfile(user, { displayName: data.name });
 
   const now = new Date().toISOString();
-  const assignedRole: UserRole = isSuperAdminEmail(data.email) ? "global_admin" : "citizen";
+  const assignedRole: UserRole = getBootstrapRole(data.email);
 
   const newProfile: UserProfile = {
     uid: user.uid,
@@ -134,8 +153,8 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
     email: data.email,
     phone: data.phone || "",
     role: assignedRole,
-    organization: assignedRole === "global_admin" ? "EOC National Super Admin Command" : "",
-    badgeNumber: assignedRole === "global_admin" ? "SUPER-ADMIN-01" : "",
+    organization: assignedRole === "global_admin" ? "EOC National Super Admin Command" : assignedRole === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
+    badgeNumber: assignedRole === "global_admin" ? "SUPER-ADMIN-01" : assignedRole === "rescue_admin" ? "RESCUE-ADMIN-01" : "",
     photoURL: user.photoURL || null,
     createdAt: now,
     lastLogin: now,
@@ -158,14 +177,16 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
+  const targetRole = getBootstrapRole(data.email);
   
   let userCredential;
   try {
     userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
   } catch (err: unknown) {
     const fbErr = err as { code?: string };
+    // Auto-create Whitelisted Admin account in Firebase Auth if not created yet!
     if (
-      isSuperAdminEmail(data.email) &&
+      (targetRole === "global_admin" || targetRole === "rescue_admin") &&
       (fbErr.code === "auth/user-not-found" || fbErr.code === "auth/invalid-credential")
     ) {
       try {
@@ -184,12 +205,12 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   let profile = await getUserProfile(user.uid);
 
   if (profile) {
-    if (isSuperAdminEmail(data.email) && profile.role !== "global_admin") {
-      profile.role = "global_admin";
+    if (targetRole !== "citizen" && profile.role !== targetRole) {
+      profile.role = targetRole;
       try {
-        await updateDoc(doc(db, USERS_COLLECTION, user.uid), { role: "global_admin" });
+        await updateDoc(doc(db, USERS_COLLECTION, user.uid), { role: targetRole });
       } catch (e) {
-        console.warn("Error forcing super admin role:", e);
+        console.warn("Error forcing admin role:", e);
       }
     }
 
@@ -200,8 +221,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
     profile.lastLogin = now;
   } else {
-    const isSuperAdmin = isSuperAdminEmail(data.email);
-    const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
     const fallbackName = user.displayName || data.email.split("@")[0] || "User";
 
     profile = {
@@ -209,9 +228,9 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       name: fallbackName,
       email: user.email || data.email,
       phone: user.phoneNumber || "",
-      role: initialRole,
-      organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
-      badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
+      role: targetRole,
+      organization: targetRole === "global_admin" ? "EOC National Super Admin Command" : targetRole === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
+      badgeNumber: targetRole === "global_admin" ? "SUPER-ADMIN-01" : targetRole === "rescue_admin" ? "RESCUE-ADMIN-01" : "",
       photoURL: user.photoURL || null,
       createdAt: now,
       lastLogin: now,
@@ -238,14 +257,15 @@ export async function loginWithGoogle(): Promise<UserProfile> {
   const userCredential = await signInWithPopup(auth, googleProvider);
   const user = userCredential.user;
   const now = new Date().toISOString();
+  const targetRole = getBootstrapRole(user.email);
 
   let profile = await getUserProfile(user.uid);
 
   if (profile) {
-    if (isSuperAdminEmail(user.email) && profile.role !== "global_admin") {
-      profile.role = "global_admin";
+    if (targetRole !== "citizen" && profile.role !== targetRole) {
+      profile.role = targetRole;
       try {
-        await updateDoc(doc(db, USERS_COLLECTION, user.uid), { role: "global_admin" });
+        await updateDoc(doc(db, USERS_COLLECTION, user.uid), { role: targetRole });
       } catch (e) {}
     }
     try {
@@ -255,17 +275,14 @@ export async function loginWithGoogle(): Promise<UserProfile> {
     }
     profile.lastLogin = now;
   } else {
-    const isSuperAdmin = isSuperAdminEmail(user.email);
-    const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
-
     profile = {
       uid: user.uid,
       name: user.displayName || user.email?.split("@")[0] || "Google User",
       email: user.email || "",
       phone: user.phoneNumber || "",
-      role: initialRole,
-      organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
-      badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
+      role: targetRole,
+      organization: targetRole === "global_admin" ? "EOC National Super Admin Command" : targetRole === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
+      badgeNumber: targetRole === "global_admin" ? "SUPER-ADMIN-01" : targetRole === "rescue_admin" ? "RESCUE-ADMIN-01" : "",
       photoURL: user.photoURL || null,
       createdAt: now,
       lastLogin: now,
@@ -285,7 +302,6 @@ export async function loginWithGoogle(): Promise<UserProfile> {
 
 /**
  * Provisions a new user account with a UNIQUE temporary password.
- * Flags account with mustChangePassword = true so user is forced to change password upon 1st login.
  */
 export async function provisionUserAccountBySuperAdmin(data: {
   name: string;
@@ -346,14 +362,11 @@ export async function completeFirstLoginPasswordChange(newPassword: string): Pro
     throw new Error("No active authenticated user found.");
   }
 
-  // 1. Update Firebase Auth Password
   await updatePassword(currentUser, newPassword);
 
-  // 2. Update Cloud Firestore profile document
   const userDocRef = doc(db, USERS_COLLECTION, currentUser.uid);
   await updateDoc(userDocRef, { mustChangePassword: false });
 
-  // 3. Update local session storage
   const profile = await getUserProfile(currentUser.uid);
   if (profile) {
     profile.mustChangePassword = false;
