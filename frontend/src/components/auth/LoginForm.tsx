@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Users,
   AlertCircle,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginFormData } from "@/types/auth";
@@ -68,14 +69,15 @@ export const LoginForm: React.FC = () => {
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
-      let message = "Invalid email or password. Please verify your credentials.";
+      let message = "Invalid email or password. Please check your credentials.";
       const firebaseError = err as { code?: string; message?: string };
-      if (firebaseError.code === "auth/invalid-credential" || firebaseError.code === "auth/wrong-password") {
-        message = "Incorrect email or password. If you don't have an account yet, click 'Register as Citizen' below.";
+      
+      if (firebaseError.code === "auth/admin-password-mismatch" || firebaseError.message?.includes("Authorized")) {
+        message = firebaseError.message || "Authorized Admin account detected. Please check your assigned temporary password or click 'Forgot password?' below.";
+      } else if (firebaseError.code === "auth/invalid-credential" || firebaseError.code === "auth/wrong-password") {
+        message = "Incorrect password. If you forgot your password, please click 'Forgot password?' to receive a reset link in your email.";
       } else if (firebaseError.code === "auth/user-not-found") {
-        message = "No account found with this email address. Click 'Register as Citizen' below to create your account!";
-      } else if (firebaseError.code === "auth/api-key-not-valid") {
-        message = "Firebase API Key is invalid. Please set valid Firebase credentials in .env.local.";
+        message = "No account found with this email address. Click 'Register as Citizen' below to create your account.";
       } else if (firebaseError.message) {
         message = firebaseError.message;
       }
@@ -106,7 +108,7 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="w-full max-w-xl flex flex-col items-center space-y-8 my-6">
-      {/* Premium White Floating Login Card */}
+      {/* Floating Login Card */}
       <motion.div
         initial={{ opacity: 0, y: 25, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -134,7 +136,17 @@ export const LoginForm: React.FC = () => {
             className="mb-6 rounded-2xl bg-red-50 border border-red-200 p-4 text-xs font-semibold text-red-700 flex items-start gap-3 shadow-xs"
           >
             <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-            <span>{errors.general}</span>
+            <div className="space-y-1">
+              <p className="leading-relaxed">{errors.general}</p>
+              <button
+                type="button"
+                onClick={() => setIsForgotModalOpen(true)}
+                className="text-red-600 underline font-bold hover:text-red-800 transition-colors flex items-center gap-1 mt-1 text-[11px]"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Click here to send Password Reset Link to your email</span>
+              </button>
+            </div>
           </motion.div>
         )}
 
@@ -285,7 +297,7 @@ export const LoginForm: React.FC = () => {
 
       {/* 3 Responsive Bottom Feature Cards */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-        {/* Card 1: Secure Access (Red) */}
+        {/* Card 1: Secure Access */}
         <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
           <div className="p-2.5 bg-red-50 text-red-600 rounded-xl border border-red-100 shrink-0">
             <Shield className="w-5 h-5" />
@@ -296,7 +308,7 @@ export const LoginForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: 24/7 Protection (Blue) */}
+        {/* Card 2: 24/7 Protection */}
         <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shrink-0">
             <ShieldCheck className="w-5 h-5" />
@@ -307,7 +319,7 @@ export const LoginForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: Trusted by Thousands (Green) */}
+        {/* Card 3: Trusted by Thousands */}
         <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0">
             <Users className="w-5 h-5" />
