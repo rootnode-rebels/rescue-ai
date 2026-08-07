@@ -25,11 +25,15 @@ export const SOSModuleLayout: React.FC = () => {
   const handleSendAlert = async () => {
     const sosData: SOSRequest = {
       id: "sos-" + Date.now(),
+      userId: "citizen-1",
+      userName: "Citizen Emergency User",
+      userPhone: "+1 (555) 000-0000",
       category: emergencyType.toUpperCase() as SOSRequest["category"],
       description: description || `Emergency ${emergencyType} report filed.`,
       status: "PENDING",
       priority: "CRITICAL",
       peopleCount: peopleAffected,
+      medicalNeeds: true,
       location: {
         latitude: 37.7749,
         longitude: -122.4194,
@@ -37,6 +41,7 @@ export const SOSModuleLayout: React.FC = () => {
         accuracy: 8,
       },
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       isOfflineCreated: !navigator.onLine,
     };
 
@@ -65,7 +70,7 @@ export const SOSModuleLayout: React.FC = () => {
         if (res.ok) {
           const result = await res.json();
           if (result.priority) {
-            setActiveSOS((prev) => prev ? { ...prev, priority: result.priority, status: "DISPATCHED" } : null);
+            setActiveSOS((prev) => (prev ? { ...prev, priority: result.priority, status: "DISPATCHED" } : null));
           }
         }
       } catch (err) {
