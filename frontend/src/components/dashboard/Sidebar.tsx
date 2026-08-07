@@ -25,8 +25,8 @@ export const Sidebar: React.FC = () => {
   const { logout } = useAuth();
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, active: true },
-    { name: "SOS & Help", href: "#sos", icon: Flame },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "SOS & Help", href: "/dashboard/sos", icon: Flame },
     { name: "AI Assistant", href: "#ai-assistant", icon: Bot },
     { name: "Nearby Shelters", href: "#shelters", icon: MapPin },
     { name: "My Requests", href: "#my-requests", icon: FileText },
@@ -63,9 +63,9 @@ export const Sidebar: React.FC = () => {
         <nav className="space-y-1.5">
           {navItems.map((item) => {
             const IconComp = item.icon;
-            const isActive = item.active || pathname === item.href;
+            const isActive = pathname === item.href;
             return (
-              <a
+              <Link
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-2xl transition-all duration-200 ${
@@ -76,7 +76,7 @@ export const Sidebar: React.FC = () => {
               >
                 <IconComp className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
                 <span>{item.name}</span>
-              </a>
+              </Link>
             );
           })}
         </nav>

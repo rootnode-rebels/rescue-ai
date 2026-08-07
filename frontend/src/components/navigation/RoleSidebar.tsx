@@ -15,18 +15,21 @@ interface MenuItem {
 const MENU_ITEMS: Record<UserRole, MenuItem[]> = {
   Citizen: [
     { title: "Citizen Overview", href: "/dashboard", icon: "🏠" },
+    { title: "Emergency SOS Page", href: "/dashboard/sos", icon: "🆘" },
     { title: "Safety & Evacuation", href: "/dashboard#evacuation", icon: "🗺️" },
     { title: "Status Updates", href: "/dashboard#updates", icon: "📢" },
     { title: "My Profile", href: "/dashboard#profile", icon: "👤" },
   ],
   "Rescue Team": [
     { title: "Rescue Operational Board", href: "/rescue-dashboard", icon: "🚨" },
+    { title: "Emergency SOS Monitor", href: "/dashboard/sos", icon: "🆘" },
     { title: "Dispatch & Location Map", href: "/rescue-dashboard#dispatch", icon: "📍" },
     { title: "Resource Requests", href: "/rescue-dashboard#resources", icon: "📦" },
     { title: "Team Field Logs", href: "/rescue-dashboard#logs", icon: "📋" },
   ],
   Administrator: [
     { title: "System Administration", href: "/admin", icon: "⚙️" },
+    { title: "Emergency SOS Center", href: "/dashboard/sos", icon: "🆘" },
     { title: "User & Role Management", href: "/admin#users", icon: "👥" },
     { title: "System Analytics & Logs", href: "/admin#analytics", icon: "📊" },
     { title: "Broadcast Crisis Alert", href: "/admin#alert", icon: "⚠️" },
@@ -57,10 +60,10 @@ export const RoleSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 min-h-screen flex flex-col justify-between p-4 text-slate-100">
+    <aside className="w-64 bg-slate-900 border-r border-slate-800 min-h-screen flex flex-col justify-between p-4 text-slate-100 font-sans">
       <div>
         {/* RescueAI Brand */}
-        <div className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-slate-800">
+        <Link href="/" className="flex items-center gap-3 px-3 py-4 mb-6 border-b border-slate-800">
           <div className="h-10 w-10 rounded-xl bg-red-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-red-900/40">
             🆘
           </div>
@@ -68,7 +71,7 @@ export const RoleSidebar: React.FC = () => {
             <h2 className="font-bold text-lg leading-none text-slate-100">RescueAI</h2>
             <span className="text-xs text-red-400 font-medium">Emergency Ops</span>
           </div>
-        </div>
+        </Link>
 
         {/* User Card */}
         {userProfile && (

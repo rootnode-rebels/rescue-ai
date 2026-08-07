@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Flame, MapPin, Radio, Zap } from "lucide-react";
+import { Flame, MapPin, Radio, Zap, ArrowRight } from "lucide-react";
 import { EmergencySOSModal } from "../landing/EmergencySOSModal";
 
 export const SOSCard: React.FC = () => {
@@ -45,6 +46,16 @@ export const SOSCard: React.FC = () => {
                 <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
                 <span>AI TRIAGE: ACTIVE</span>
               </div>
+            </div>
+
+            <div className="pt-2 flex justify-center lg:justify-start">
+              <Link
+                href="/dashboard/sos"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-red-600 hover:bg-slate-100 font-extrabold text-xs rounded-xl shadow-lg transition-all uppercase tracking-wider"
+              >
+                <span>Open Full SOS Module</span>
+                <ArrowRight className="w-4 h-4 text-red-600" />
+              </Link>
             </div>
           </div>
 
