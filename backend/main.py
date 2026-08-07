@@ -1,50 +1,81 @@
-# FastAPI app: exposes minimal endpoints for SOS capture, list, accept, triage.
-from fastapi import FastAPI, Request, Header, HTTPException
-from pydantic import BaseModel
-from typing import Optional
-import uvicorn
+# FastAPI App Engine for RescueAI Emergency System
 import os
-import triage as triage_module
-from firestore_client import create_sos_document, list_pending, update_sos
+from typing import Optional
+from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import uvicorn
 
-# Optional Firebase Admin for token validation
+import triage as triage_module
+from firestore_client import (
+    create_sos_document,
+    list_pending,
+    update_sos,
+    get_user_role,
+    set_user_role,
+)
+
+# Optional Firebase Admin configuration
 try:
     import firebase_admin
     from firebase_admin import auth as fb_auth, credentials
     if not firebase_admin._apps:
         cred_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-        if cred_path:
+        if cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
 except Exception as e:
-    print("Firebase admin not configured:", e)
+    print("Firebase admin initialized in open token mode:", e)
     firebase_admin = None
 
-app = FastAPI(title="RescueAI Backend")
+app = FastAPI(
+    title="RescueAI Emergency Coordination Backend Engine",
+    version="2.0.0",
+    description="Real-Time FastAPI Engine for Emergency SOS Capture, Triage Scoring, and Dispatch Management",
+)
+
+# Enable CORS for Next.js Vercel Frontend and Custom Domains
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class SOSCreate(BaseModel):
-    local_id: Optional[str]
-    user_id: Optional[str]
-    device_id: Optional[str]
-    description: Optional[str]
+    local_id: Optional[str] = None
+    user_id: Optional[str] = None
+    device_id: Optional[str] = None
+    description: Optional[str] = None
     structured_fields: Optional[dict] = {}
     location: Optional[dict] = {}
-    created_at: Optional[str]
+    created_at: Optional[str] = None
+
+class RoleUpdate(BaseModel):
+    role: str
+
+@app.get("/")
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "service": "RescueAI FastAPI Dispatch Engine",
+        "version": "2.0.0",
+        "firebase_admin_enabled": firebase_admin is not None,
+    }
 
 @app.post("/api/v1/sos")
 async def create_sos(payload: SOSCreate, authorization: Optional[str] = Header(None)):
-    # optional token validation
     if authorization and firebase_admin:
         token = authorization.split('Bearer ')[-1] if 'Bearer' in authorization else authorization
         try:
             decoded = fb_auth.verify_id_token(token)
             payload.user_id = decoded.get('uid')
         except Exception as e:
-            # invalid token -> continue as guest for demo, but log
-            print("Token verify failed:", e)
+            print("Token verify notice:", e)
 
-    # run triage sync (deterministic)
-    score,label,conf,reasons = triage_module.triage_score(payload.dict())
+    score, label, conf, reasons = triage_module.triage_score(payload.dict())
     sos_doc = payload.dict()
     sos_doc.update({
         'status': 'pending',
@@ -55,22 +86,27 @@ async def create_sos(payload: SOSCreate, authorization: Optional[str] = Header(N
         'offline_created': False
     })
     created = create_sos_document(sos_doc)
-    return {"ok": True, "sos_id": created['id'], "priority_score": score, "priority_label": label, "confidence": conf, "reasons": reasons}
+    return {
+        "ok": True,
+        "sos_id": created.get('requestId') or created.get('id'),
+        "priority_score": score,
+        "priority_label": label,
+        "confidence": conf,
+        "reasons": reasons,
+    }
 
 @app.get("/api/v1/sos")
 async def get_pending(status: str = "pending", limit: int = 50):
     docs = list_pending(limit=limit)
-    # convert timestamps to iso if needed
     return docs
 
 @app.patch("/api/v1/sos/{sos_id}/accept")
 async def accept_sos(sos_id: str, payload: dict):
-    updated = update_sos(sos_id, {'status': 'in_progress', 'assigned_team_id': payload.get('team_id','demo')})
+    updated = update_sos(sos_id, {'status': 'in_progress', 'assigned_team_id': payload.get('team_id', 'demo_unit_1')})
     return updated
 
 @app.patch("/api/v1/sos/{sos_id}/override_priority")
 async def override_priority(sos_id: str, payload: dict):
-    # payload: new_priority_label, new_priority_score, officer_id, reason
     patch = {
         'priority_label': payload.get('new_priority_label'),
         'priority_score': payload.get('new_priority_score'),
@@ -78,8 +114,17 @@ async def override_priority(sos_id: str, payload: dict):
         'overridden_by': payload.get('officer_id')
     }
     updated = update_sos(sos_id, patch)
-    # write an audit record in Firestore audits collection could be added here
     return updated
 
+@app.get("/api/v1/users/{uid}/role")
+async def fetch_role(uid: str):
+    role = get_user_role(uid)
+    return {"uid": uid, "role": role}
+
+@app.patch("/api/v1/users/{uid}/role")
+async def update_role(uid: str, payload: RoleUpdate):
+    success = set_user_role(uid, payload.role)
+    return {"uid": uid, "role": payload.role, "success": success}
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT",8000)), reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), reload=True)
