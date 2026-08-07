@@ -20,6 +20,14 @@ export async function POST(request: Request) {
       ? `🚨 RescueAI Account Provisioned (${(role || "User").toUpperCase()})`
       : "🔒 RescueAI Password Reset Request";
 
+    // Dynamic Sender Addresses for Custom Domain & Prefixes
+    let fromAddress = "RescueAI Security <account@mail.rescue-ai.l.cd>";
+    if (actionType === "provision") {
+      fromAddress = "RescueAI Admin Command <admin@mail.rescue-ai.l.cd>";
+    } else if (actionType === "emergency") {
+      fromAddress = "RescueAI Emergency Dispatch <emergency@mail.rescue-ai.l.cd>";
+    }
+
     const htmlContent = isProvisioning
       ? `
         <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 30px; border-radius: 16px;">
@@ -34,7 +42,7 @@ export async function POST(request: Request) {
             ${tempPassword ? `<p style="margin: 4px 0;"><strong>Temporary Password:</strong> <code style="color: #f43f5e; background: #0f172a; padding: 2px 6px; border-radius: 4px;">${tempPassword}</code></p>` : ""}
           </div>
           <p>Please log in at <a href="https://frontend-flame-two-34.vercel.app/login" style="color: #ef4444; font-weight: bold;">RescueAI Portal (/login)</a> and change your password upon initial sign in.</p>
-          <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Team Rootnode Rebels</p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Sender: account@mail.rescue-ai.l.cd</p>
         </div>
       `
       : `
@@ -49,26 +57,50 @@ export async function POST(request: Request) {
             <a href="https://frontend-flame-two-34.vercel.app/login" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 10px; display: inline-block;">Reset Password & Sign In</a>
           </div>
           <p style="color: #94a3b8; font-size: 13px;">If you did not request a password reset, you can safely ignore this email.</p>
-          <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Team Rootnode Rebels</p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Sender: account@mail.rescue-ai.l.cd</p>
         </div>
       `;
 
-    // Send email via Resend API using env variable
-    const resendRes = await fetch("https://api.resend.com/emails", {
+    // Attempt 1: Custom domain account@mail.rescue-ai.l.cd
+    let resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "RescueAI Emergency Team <onboarding@resend.dev>",
+        from: fromAddress,
         to: [email],
         subject: subject,
         html: htmlContent,
       }),
     });
 
-    const resendData = await resendRes.json();
+    let resendData = await resendRes.json();
+
+    // Fallback Attempt 2: If domain is not verified yet in Resend, use onboarding@resend.dev for guaranteed inbox delivery
+    if (!resendRes.ok) {
+      console.warn("Retrying with fallback onboarding sender domain...");
+      const fallbackSender = isProvisioning
+        ? "RescueAI Super Admin <onboarding@resend.dev>"
+        : "RescueAI Security <onboarding@resend.dev>";
+
+      resendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fallbackSender,
+          to: [email],
+          subject: subject,
+          html: htmlContent,
+        }),
+      });
+      resendData = await resendRes.json();
+    }
+
     return NextResponse.json({ ok: true, id: resendData.id });
   } catch (err: unknown) {
     console.error("Error in send-reset-email API route:", err);
