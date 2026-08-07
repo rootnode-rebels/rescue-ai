@@ -13,6 +13,42 @@ const SOS_COLLECTION_1 = "sos_requests";
 const SOS_COLLECTION_2 = "sos";
 
 /**
+ * Normalizes raw Firestore document data into a strict SOSFirestoreRequest object.
+ */
+function normalizeSOSDocument(docId: string, rawData: Record<string, any>): SOSFirestoreRequest {
+  const reqId = rawData.requestId || rawData.id || docId;
+  const defaultLat = 12.9716;
+  const defaultLng = 77.5946;
+
+  let parsedLat = typeof rawData.latitude === "number" ? rawData.latitude : parseFloat(rawData.latitude);
+  let parsedLng = typeof rawData.longitude === "number" ? rawData.longitude : parseFloat(rawData.longitude);
+
+  if (isNaN(parsedLat)) parsedLat = defaultLat;
+  if (isNaN(parsedLng)) parsedLng = defaultLng;
+
+  return {
+    requestId: reqId,
+    uid: rawData.uid || rawData.user_id || "citizen-anon",
+    citizenName: rawData.citizenName || rawData.name || "Citizen In Distress",
+    userPhone: rawData.userPhone || rawData.phone || "+91 98765 43210",
+    category: rawData.category || rawData.disaster_type || "FLOOD",
+    description: rawData.description || "Emergency broadcast filed.",
+    priority: rawData.priority || "CRITICAL",
+    status: (rawData.status as SOSStatus) || "Pending",
+    latitude: parsedLat,
+    longitude: parsedLng,
+    address: rawData.address || "Live GPS Emergency Grid",
+    peopleCount: rawData.peopleCount || rawData.people_count || 1,
+    medicalNeeds: rawData.medicalNeeds ?? true,
+    assignedRescue: rawData.assignedRescue || "",
+    assignedTeamName: rawData.assignedTeamName || "",
+    createdAt: rawData.createdAt || new Date().toISOString(),
+    updatedAt: rawData.updatedAt || new Date().toISOString(),
+    isOfflineCreated: rawData.isOfflineCreated || false,
+  };
+}
+
+/**
  * Instantly writes a new Citizen SOS request to BOTH Cloud Firestore collections (sos_requests & sos).
  * Dual collection write guarantees 100% calibration across all frontend & backend engines.
  */
@@ -22,7 +58,6 @@ export async function createSOSRequestInFirestore(
   const requestId = sosData.requestId || "sos-" + Date.now();
   const now = new Date().toISOString();
 
-  // Calibrated Default Coordinates (India fallback)
   const defaultLat = 12.9716;
   const defaultLng = 77.5946;
 
@@ -91,7 +126,7 @@ export async function updateSOSStatusInFirestore(
   assignedTeamName?: string
 ): Promise<void> {
   try {
-    const updateData: Partial<SOSFirestoreRequest> = {
+    const updateData: Record<string, any> = {
       status,
       updatedAt: new Date().toISOString(),
     };
@@ -134,11 +169,9 @@ export function subscribeLiveSOSQueue(
 
   const mergeAndEmit = () => {
     const map = new Map<string, SOSFirestoreRequest>();
-    // Insert list1
     list1.forEach((item) => {
       if (item && item.requestId) map.set(item.requestId, item);
     });
-    // Insert list2 (overwrites if newer)
     list2.forEach((item) => {
       if (item && item.requestId) map.set(item.requestId, item);
     });
@@ -154,7 +187,9 @@ export function subscribeLiveSOSQueue(
       (snapshot) => {
         list1 = [];
         snapshot.forEach((docSnap) => {
-          if (docSnap.exists()) list1.push(docSnap.data() as SOSFirestoreRequest);
+          if (docSnap.exists()) {
+            list1.push(normalizeSOSDocument(docSnap.id, docSnap.data()));
+          }
         });
         mergeAndEmit();
       },
@@ -166,7 +201,9 @@ export function subscribeLiveSOSQueue(
       (snapshot) => {
         list2 = [];
         snapshot.forEach((docSnap) => {
-          if (docSnap.exists()) list2.push(docSnap.data() as SOSFirestoreRequest);
+          if (docSnap.exists()) {
+            list2.push(normalizeSOSDocument(docSnap.id, docSnap.data()));
+          }
         });
         mergeAndEmit();
       },
@@ -196,17 +233,15 @@ export function subscribeUserActiveSOS(
       docRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          callback(docSnap.data() as SOSFirestoreRequest);
+          callback(normalizeSOSDocument(docSnap.id, docSnap.data()));
         } else {
           callback(null);
         }
       },
-      (error) => {
-        console.warn("User real-time snapshot error:", error);
-      }
+      (err) => console.warn("Error subscribing user SOS:", err)
     );
   } catch (err) {
-    console.warn("Error subscribing to user active SOS:", err);
+    console.warn("User SOS subscription exception:", err);
     return () => {};
   }
 }
