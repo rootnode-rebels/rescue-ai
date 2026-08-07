@@ -63,6 +63,7 @@ function clearProfileFromLocalStorage(): void {
 
 /**
  * Fetches user profile from Firestore by UID or fallback to localStorage.
+ * Preserves stored user role (citizen, rescue_admin, global_admin).
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
@@ -71,9 +72,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
     if (userSnapshot.exists()) {
       const profile = userSnapshot.data() as UserProfile;
-      if (isSuperAdminEmail(profile.email)) {
-        profile.role = "global_admin";
-      }
       saveProfileToLocalStorage(profile);
       return profile;
     }
@@ -87,9 +85,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (stored) {
       try {
         const profile = JSON.parse(stored) as UserProfile;
-        if (isSuperAdminEmail(profile.email)) {
-          profile.role = "global_admin";
-        }
         return profile;
       } catch (e) {
         console.warn("Error parsing stored user profile:", e);
@@ -101,7 +96,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 /**
  * Registers a new user with Email & Password.
- * Maps Super Admin Whitelist emails to global_admin automatically.
+ * Preserves selected role (citizen -> Citizen Dashboard, rescue_admin -> Rescue Dashboard).
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -110,25 +105,21 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
   await updateProfile(user, { displayName: data.name });
 
-  const isSuperAdmin = isSuperAdminEmail(data.email);
-  let assignedRole: UserRole = data.role || "citizen";
-  if (isSuperAdmin) {
-    assignedRole = "global_admin";
-  }
-
+  const assignedRole: UserRole = data.role || "citizen";
   const now = new Date().toISOString();
+
   const newProfile: UserProfile = {
     uid: user.uid,
     name: data.name,
     email: data.email,
     phone: data.phone || "",
     role: assignedRole,
-    organization: isSuperAdmin ? "EOC National Super Admin Command" : data.organization || "",
-    badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : data.badgeNumber || "",
+    organization: data.organization || "",
+    badgeNumber: data.badgeNumber || "",
     photoURL: user.photoURL || null,
     createdAt: now,
     lastLogin: now,
-    status: data.role === "citizen" || isSuperAdmin ? "active" : "pending_approval",
+    status: assignedRole === "citizen" || assignedRole === "global_admin" ? "active" : "pending_approval",
   };
 
   try {
@@ -151,22 +142,18 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   const now = new Date().toISOString();
 
   let profile = await getUserProfile(user.uid);
-  const isSuperAdmin = isSuperAdminEmail(data.email);
 
   if (profile) {
-    if (isSuperAdmin) {
-      profile.role = "global_admin";
-    }
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
         lastLogin: now,
-        role: profile.role,
       });
     } catch (err) {
       console.warn("Firestore update error:", err);
     }
     profile.lastLogin = now;
   } else {
+    const isSuperAdmin = isSuperAdminEmail(data.email);
     profile = {
       uid: user.uid,
       name: user.displayName || "User",
@@ -201,10 +188,10 @@ export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Prom
   const now = new Date().toISOString();
 
   let profile = await getUserProfile(user.uid);
-  const isSuperAdmin = isSuperAdminEmail(user.email);
-  const assignedRole: UserRole = isSuperAdmin ? "global_admin" : requestedRole;
 
   if (!profile) {
+    const isSuperAdmin = isSuperAdminEmail(user.email);
+    const assignedRole: UserRole = isSuperAdmin ? "global_admin" : requestedRole;
     profile = {
       uid: user.uid,
       name: user.displayName || "Google User",
@@ -224,13 +211,9 @@ export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Prom
       console.warn("Firestore setDoc error:", err);
     }
   } else {
-    if (isSuperAdmin) {
-      profile.role = "global_admin";
-    }
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
         lastLogin: now,
-        role: profile.role,
       });
     } catch (err) {
       console.warn("Firestore update error:", err);
