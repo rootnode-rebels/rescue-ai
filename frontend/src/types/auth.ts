@@ -11,7 +11,7 @@ export interface UserProfile {
   photoURL: string | null;
   createdAt: string;
   lastLogin: string;
-  status: "active" | "suspended" | "pending";
+  status: "active" | "suspended" | "pending" | "pending_approval";
 }
 
 export interface RegisterFormData {

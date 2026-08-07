@@ -127,6 +127,13 @@ export const RescueDashboardLayout: React.FC = () => {
 
   useEffect(() => {
     fetchLiveSOSQueue();
+
+    // 5-second real-time auto-polling interval for live emergency updates
+    const pollInterval = setInterval(() => {
+      fetchLiveSOSQueue();
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
   }, [fetchLiveSOSQueue]);
 
   const handleAcceptRequest = (id: string) => {
