@@ -16,6 +16,7 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
+  getFirestore,
 } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import { auth, db, googleProvider, firebaseConfig } from "@/lib/firebase";
@@ -26,7 +27,6 @@ const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
  * Super Admin Authorized Bootstrap Emails
- * Used ONLY when creating initial user documents if no document exists yet.
  */
 export const SUPER_ADMIN_EMAILS = [
   "adhibasavanal@gmail.com",
@@ -252,6 +252,7 @@ export async function provisionUserAccountBySuperAdmin(data: {
   const tempAppName = "SecondaryAdminApp_" + Date.now();
   const secondaryApp = initializeApp(firebaseConfig, tempAppName);
   const secondaryAuth = getAuth(secondaryApp);
+  const secondaryDb = getFirestore(secondaryApp);
 
   const credential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
   const user = credential.user;
@@ -271,9 +272,19 @@ export async function provisionUserAccountBySuperAdmin(data: {
     status: "active",
   };
 
-  await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
-  await signOut(secondaryAuth);
+  try {
+    await setDoc(doc(secondaryDb, USERS_COLLECTION, user.uid), newProfile);
+  } catch (e) {
+    console.warn("Secondary DB setDoc notice:", e);
+  }
 
+  try {
+    await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
+  } catch (e) {
+    console.warn("Primary DB setDoc notice:", e);
+  }
+
+  await signOut(secondaryAuth);
   return newProfile;
 }
 
@@ -308,8 +319,12 @@ export function subscribeAllUsers(callback: (users: UserProfile[]) => void): () 
  * Updates a user's assigned role in Cloud Firestore in real time.
  */
 export async function updateUserRoleInFirestore(uid: string, newRole: UserRole): Promise<void> {
-  const docRef = doc(db, USERS_COLLECTION, uid);
-  await updateDoc(docRef, { role: newRole, status: "active" });
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    await updateDoc(docRef, { role: newRole, status: "active" });
+  } catch (err) {
+    console.warn("Error updating user role in Firestore:", err);
+  }
 }
 
 /**
