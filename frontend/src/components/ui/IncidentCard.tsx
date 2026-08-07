@@ -12,7 +12,7 @@ import {
   PhoneCall,
   ExternalLink,
 } from "lucide-react";
-import { SOSRequest, PriorityLevel, SOSStatus } from "@/types";
+import { SOSRequest, PriorityLevel } from "@/types";
 
 interface IncidentCardProps {
   request: SOSRequest;
@@ -49,7 +49,15 @@ const PRIORITY_STYLES: Record<PriorityLevel, { bg: string; text: string; border:
   },
 };
 
-const STATUS_STYLES: Record<SOSStatus, { bg: string; text: string }> = {
+const DEFAULT_STATUS_STYLE = { bg: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300", text: "PENDING DISPATCH" };
+
+const STATUS_MAP: Record<string, { bg: string; text: string }> = {
+  Pending: { bg: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300", text: "PENDING DISPATCH" },
+  Accepted: { bg: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300", text: "RESCUE DISPATCHED" },
+  "Team On The Way": { bg: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300", text: "TEAM EN ROUTE" },
+  Reached: { bg: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300", text: "REACHED SITE" },
+  Completed: { bg: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300", text: "RESOLVED" },
+  Rejected: { bg: "bg-gray-100 text-gray-800 dark:bg-slate-800 dark:text-slate-300", text: "REJECTED" },
   PENDING: { bg: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300", text: "PENDING DISPATCH" },
   ACCEPTED: { bg: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300", text: "RESCUE DISPATCHED" },
   IN_PROGRESS: { bg: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300", text: "IN PROGRESS" },
@@ -65,7 +73,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
   isRescueView = false,
 }) => {
   const priorityStyle = PRIORITY_STYLES[request.priority] || PRIORITY_STYLES.MEDIUM;
-  const statusStyle = STATUS_STYLES[request.status] || STATUS_STYLES.PENDING;
+  const statusStyle = STATUS_MAP[request.status] || DEFAULT_STATUS_STYLE;
 
   return (
     <motion.div
@@ -164,7 +172,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
               </a>
             )}
 
-            {request.status === "PENDING" && onAccept && (
+            {(request.status === "PENDING" || request.status === "Pending") && onAccept && (
               <button
                 onClick={() => onAccept(request.id)}
                 className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs shadow-md shadow-red-600/30 transition-all"
@@ -173,7 +181,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
               </button>
             )}
 
-            {request.status === "ACCEPTED" && onComplete && (
+            {(request.status === "ACCEPTED" || request.status === "Accepted") && onComplete && (
               <button
                 onClick={() => onComplete(request.id)}
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-600/30 transition-all flex items-center gap-1.5"
