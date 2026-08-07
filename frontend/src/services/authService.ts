@@ -68,7 +68,7 @@ function clearProfileFromLocalStorage(): void {
 
 /**
  * Fetches user profile strictly from Firestore `users/{uid}` document.
- * NEVER alters or overwrites the stored role based on email.
+ * ONLY uses localStorage fallback if stored profile UID matches requested UID.
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
@@ -81,16 +81,18 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       return profile;
     }
   } catch (error) {
-    console.warn("Error fetching user profile from Firestore, using local fallback:", error);
+    console.warn("Error fetching user profile from Firestore:", error);
   }
 
-  // Fallback to localStorage if offline
+  // Fallback to localStorage ONLY IF stored profile UID matches requested UID
   if (typeof window !== "undefined") {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
         const profile = JSON.parse(stored) as UserProfile;
-        return profile;
+        if (profile && profile.uid === uid) {
+          return profile;
+        }
       } catch (e) {
         console.warn("Error parsing stored user profile:", e);
       }
@@ -140,7 +142,7 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 /**
  * Signs in user with Email & Password.
  * Reads existing profile from Firestore users/{uid} document.
- * Routes strictly based on Firestore document role.
+ * NEVER overwrites existing Firestore document roles/names.
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -160,27 +162,42 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
     profile.lastLogin = now;
   } else {
-    const isSuperAdmin = isSuperAdminEmail(data.email);
-    const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
+    // Double-check Firestore directly before creating a new default document
+    const userDocRef = doc(db, USERS_COLLECTION, user.uid);
+    const snap = await getDoc(userDocRef);
 
-    profile = {
-      uid: user.uid,
-      name: user.displayName || "User",
-      email: user.email || data.email,
-      phone: user.phoneNumber || "",
-      role: initialRole,
-      organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
-      badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
-      photoURL: user.photoURL || null,
-      createdAt: now,
-      lastLogin: now,
-      status: "active",
-    };
+    if (snap.exists()) {
+      profile = snap.data() as UserProfile;
+      profile.lastLogin = now;
+      try {
+        await updateDoc(userDocRef, { lastLogin: now });
+      } catch (e) {
+        console.warn("Could not update lastLogin:", e);
+      }
+    } else {
+      const isSuperAdmin = isSuperAdminEmail(data.email);
+      const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
+      const fallbackName = user.displayName || data.email.split("@")[0] || "User";
 
-    try {
-      await setDoc(doc(db, USERS_COLLECTION, user.uid), profile);
-    } catch (err) {
-      console.warn("Firestore setDoc error:", err);
+      profile = {
+        uid: user.uid,
+        name: fallbackName,
+        email: user.email || data.email,
+        phone: user.phoneNumber || "",
+        role: initialRole,
+        organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
+        badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
+        photoURL: user.photoURL || null,
+        createdAt: now,
+        lastLogin: now,
+        status: "active",
+      };
+
+      try {
+        await setDoc(userDocRef, profile);
+      } catch (err) {
+        console.warn("Firestore setDoc error:", err);
+      }
     }
   }
 
@@ -199,29 +216,7 @@ export async function loginWithGoogle(): Promise<UserProfile> {
 
   let profile = await getUserProfile(user.uid);
 
-  if (!profile) {
-    const isSuperAdmin = isSuperAdminEmail(user.email);
-    const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
-
-    profile = {
-      uid: user.uid,
-      name: user.displayName || "Google User",
-      email: user.email || "",
-      phone: user.phoneNumber || "",
-      role: initialRole,
-      organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
-      badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
-      photoURL: user.photoURL || null,
-      createdAt: now,
-      lastLogin: now,
-      status: "active",
-    };
-    try {
-      await setDoc(doc(db, USERS_COLLECTION, user.uid), profile);
-    } catch (err) {
-      console.warn("Firestore setDoc error:", err);
-    }
-  } else {
+  if (profile) {
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
         lastLogin: now,
@@ -230,6 +225,41 @@ export async function loginWithGoogle(): Promise<UserProfile> {
       console.warn("Firestore update error:", err);
     }
     profile.lastLogin = now;
+  } else {
+    const userDocRef = doc(db, USERS_COLLECTION, user.uid);
+    const snap = await getDoc(userDocRef);
+
+    if (snap.exists()) {
+      profile = snap.data() as UserProfile;
+      profile.lastLogin = now;
+      try {
+        await updateDoc(userDocRef, { lastLogin: now });
+      } catch (e) {
+        console.warn("Could not update lastLogin:", e);
+      }
+    } else {
+      const isSuperAdmin = isSuperAdminEmail(user.email);
+      const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
+
+      profile = {
+        uid: user.uid,
+        name: user.displayName || user.email?.split("@")[0] || "Google User",
+        email: user.email || "",
+        phone: user.phoneNumber || "",
+        role: initialRole,
+        organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
+        badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
+        photoURL: user.photoURL || null,
+        createdAt: now,
+        lastLogin: now,
+        status: "active",
+      };
+      try {
+        await setDoc(userDocRef, profile);
+      } catch (err) {
+        console.warn("Firestore setDoc error:", err);
+      }
+    }
   }
 
   saveProfileToLocalStorage(profile);
