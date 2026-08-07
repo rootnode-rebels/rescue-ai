@@ -33,20 +33,13 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     setStatus({ type: "loading" });
 
     try {
-      // 1. Firebase Auth reset password email link
+      // Official Firebase Auth password reset email with cryptographically signed reset token
       await resetPassword(cleanEmail);
-
-      // 2. Resend API Email Dispatch
-      await fetch("/api/send-reset-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, actionType: "reset" }),
-      });
     } catch (err: unknown) {
       console.warn("Password reset trigger notice:", err);
     }
 
-    // Always display requested confirmation message
+    // Always display user requested confirmation message
     setStatus({
       type: "success",
       message: "You will receive a password reset email if you are a registered user. Please check your inbox and spam folder.",
