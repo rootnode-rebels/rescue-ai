@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Plus, Minus, Shield, Compass, Radio } from "lucide-react";
+import { Plus, Minus, Compass, Radio } from "lucide-react";
 import { subscribeLiveSOSQueue } from "@/services/sosService";
 import { SOSFirestoreRequest } from "@/types/auth";
 

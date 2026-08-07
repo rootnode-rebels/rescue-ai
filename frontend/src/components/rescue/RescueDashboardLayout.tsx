@@ -28,12 +28,12 @@ import {
   updateSOSStatusInFirestore,
   createSOSRequestInFirestore,
 } from "@/services/sosService";
-import { SOSFirestoreRequest } from "@/types/auth";
+import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
 
 export const RescueDashboardLayout: React.FC = () => {
   const [requests, setRequests] = useState<SOSFirestoreRequest[]>([]);
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
-  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [filterStatus] = useState<string>("ALL");
   const [lastSyncedTime, setLastSyncedTime] = useState<string>("");
   const [activeSOSForMap, setActiveSOSForMap] = useState<SOSFirestoreRequest | null>(null);
 
@@ -42,8 +42,8 @@ export const RescueDashboardLayout: React.FC = () => {
     const unsubscribe = subscribeLiveSOSQueue((liveList) => {
       setRequests(liveList);
       setLastSyncedTime(new Date().toLocaleTimeString());
-      if (liveList && liveList.length > 0 && !activeSOSForMap) {
-        setActiveSOSForMap(liveList[0]);
+      if (liveList && liveList.length > 0) {
+        setActiveSOSForMap((prev) => prev || liveList[0]);
       }
     });
 
@@ -54,7 +54,7 @@ export const RescueDashboardLayout: React.FC = () => {
     await updateSOSStatusInFirestore(requestId, "Accepted", "Coast Guard Rescue Alpha");
   };
 
-  const handleSetStatus = async (requestId: string, status: any) => {
+  const handleSetStatus = async (requestId: string, status: SOSStatus) => {
     await updateSOSStatusInFirestore(requestId, status, "Coast Guard Rescue Alpha");
   };
 
