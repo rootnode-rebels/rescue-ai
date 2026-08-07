@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Flame, Clock, MapPin, Radio, ShieldCheck, Ambulance } from "lucide-react";
+import { Flame, MapPin, Radio, Ambulance } from "lucide-react";
 import { subscribeLiveSOSQueue } from "@/services/sosService";
 import { SOSFirestoreRequest } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,6 @@ export const RequestCard: React.FC = () => {
 
   useEffect(() => {
     const unsub = subscribeLiveSOSQueue((liveList) => {
-      // Show requests for current user or recent live emergency requests
       if (userProfile?.uid) {
         const userSpecific = liveList.filter(
           (r) => r.uid === userProfile.uid || r.citizenName === userProfile.name

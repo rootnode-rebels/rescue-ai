@@ -15,36 +15,36 @@ const SOS_COLLECTION_2 = "sos";
 /**
  * Normalizes raw Firestore document data into a strict SOSFirestoreRequest object.
  */
-function normalizeSOSDocument(docId: string, rawData: Record<string, any>): SOSFirestoreRequest {
-  const reqId = rawData.requestId || rawData.id || docId;
+function normalizeSOSDocument(docId: string, rawData: Record<string, unknown>): SOSFirestoreRequest {
+  const reqId = (rawData.requestId as string) || (rawData.id as string) || docId;
   const defaultLat = 12.9716;
   const defaultLng = 77.5946;
 
-  let parsedLat = typeof rawData.latitude === "number" ? rawData.latitude : parseFloat(rawData.latitude);
-  let parsedLng = typeof rawData.longitude === "number" ? rawData.longitude : parseFloat(rawData.longitude);
+  let parsedLat = typeof rawData.latitude === "number" ? rawData.latitude : parseFloat(rawData.latitude as string);
+  let parsedLng = typeof rawData.longitude === "number" ? rawData.longitude : parseFloat(rawData.longitude as string);
 
   if (isNaN(parsedLat)) parsedLat = defaultLat;
   if (isNaN(parsedLng)) parsedLng = defaultLng;
 
   return {
     requestId: reqId,
-    uid: rawData.uid || rawData.user_id || "citizen-anon",
-    citizenName: rawData.citizenName || rawData.name || "Citizen In Distress",
-    userPhone: rawData.userPhone || rawData.phone || "+91 98765 43210",
-    category: rawData.category || rawData.disaster_type || "FLOOD",
-    description: rawData.description || "Emergency broadcast filed.",
-    priority: rawData.priority || "CRITICAL",
+    uid: (rawData.uid as string) || (rawData.user_id as string) || "citizen-anon",
+    citizenName: (rawData.citizenName as string) || (rawData.name as string) || "Citizen In Distress",
+    userPhone: (rawData.userPhone as string) || (rawData.phone as string) || "+91 98765 43210",
+    category: (rawData.category as string) || (rawData.disaster_type as string) || "FLOOD",
+    description: (rawData.description as string) || "Emergency broadcast filed.",
+    priority: (rawData.priority as string) || "CRITICAL",
     status: (rawData.status as SOSStatus) || "Pending",
     latitude: parsedLat,
     longitude: parsedLng,
-    address: rawData.address || "Live GPS Emergency Grid",
-    peopleCount: rawData.peopleCount || rawData.people_count || 1,
-    medicalNeeds: rawData.medicalNeeds ?? true,
-    assignedRescue: rawData.assignedRescue || "",
-    assignedTeamName: rawData.assignedTeamName || "",
-    createdAt: rawData.createdAt || new Date().toISOString(),
-    updatedAt: rawData.updatedAt || new Date().toISOString(),
-    isOfflineCreated: rawData.isOfflineCreated || false,
+    address: (rawData.address as string) || "Live GPS Emergency Grid",
+    peopleCount: (rawData.peopleCount as number) || (rawData.people_count as number) || 1,
+    medicalNeeds: (rawData.medicalNeeds as boolean) ?? true,
+    assignedRescue: (rawData.assignedRescue as string) || "",
+    assignedTeamName: (rawData.assignedTeamName as string) || "",
+    createdAt: (rawData.createdAt as string) || new Date().toISOString(),
+    updatedAt: (rawData.updatedAt as string) || new Date().toISOString(),
+    isOfflineCreated: (rawData.isOfflineCreated as boolean) || false,
   };
 }
 
@@ -126,7 +126,7 @@ export async function updateSOSStatusInFirestore(
   assignedTeamName?: string
 ): Promise<void> {
   try {
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       status,
       updatedAt: new Date().toISOString(),
     };
