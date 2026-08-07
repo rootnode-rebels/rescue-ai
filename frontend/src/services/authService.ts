@@ -174,6 +174,7 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
 /**
  * Signs in user with Email & Password.
+ * Auto-creates user account if signing in for the first time!
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -184,14 +185,12 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
   } catch (err: unknown) {
     const fbErr = err as { code?: string };
-    // Auto-create Whitelisted Admin account in Firebase Auth if not created yet!
-    if (
-      (targetRole === "global_admin" || targetRole === "rescue_admin") &&
-      (fbErr.code === "auth/user-not-found" || fbErr.code === "auth/invalid-credential")
-    ) {
+    // Seamless Auto-Onboarding: if user tries to log in with valid credentials but user is not in Firebase Auth yet, register them on the fly!
+    if (fbErr.code === "auth/user-not-found" || fbErr.code === "auth/invalid-credential") {
       try {
         userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      } catch (createErr) {
+      } catch (createErr: unknown) {
+        // If registration fails because email already exists (meaning it was a wrong password error), throw original login error
         throw err;
       }
     } else {

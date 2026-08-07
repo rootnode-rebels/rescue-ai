@@ -68,12 +68,12 @@ export const LoginForm: React.FC = () => {
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
-      let message = "Invalid email or password.";
+      let message = "Invalid email or password. Please verify your credentials.";
       const firebaseError = err as { code?: string; message?: string };
       if (firebaseError.code === "auth/invalid-credential" || firebaseError.code === "auth/wrong-password") {
-        message = "Incorrect email or password. If you haven't created an account yet, please register first.";
+        message = "Incorrect email or password. If you don't have an account yet, click 'Register as Citizen' below.";
       } else if (firebaseError.code === "auth/user-not-found") {
-        message = "No account found with this email address. Please register a new account.";
+        message = "No account found with this email address. Click 'Register as Citizen' below to create your account!";
       } else if (firebaseError.code === "auth/api-key-not-valid") {
         message = "Firebase API Key is invalid. Please set valid Firebase credentials in .env.local.";
       } else if (firebaseError.message) {
