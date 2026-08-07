@@ -1,5 +1,8 @@
-import React from "react";
-import type { Metadata } from "next";
+"use client";
+
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { StatsBar } from "@/components/landing/StatsBar";
@@ -10,13 +13,22 @@ import { Technology } from "@/components/landing/Technology";
 import { BottomSection } from "@/components/landing/BottomSection";
 import { Footer } from "@/components/landing/Footer";
 
-export const metadata: Metadata = {
-  title: "RescueAI – AI-Powered Disaster Response & Emergency Coordination Platform",
-  description:
-    "RescueAI is an AI-powered disaster response and emergency coordination platform enabling zero-latency SOS broadcasts, Gemini AI triage, and real-time rescue dispatch.",
-};
-
 export default function LandingPage() {
+  const { userProfile, currentUser, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Instagram-style redirect: If user is logged in, redirect directly to their dashboard
+    if (!loading && (userProfile || currentUser)) {
+      const targetRole = userProfile?.role || "citizen";
+      if (targetRole === "citizen") {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/rescue-dashboard");
+      }
+    }
+  }, [userProfile, currentUser, loading, router]);
+
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-red-500 selection:text-white">
       {/* Sticky Navbar */}

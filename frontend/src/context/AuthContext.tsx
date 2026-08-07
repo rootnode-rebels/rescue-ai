@@ -18,19 +18,37 @@ import {
   UserProfile,
 } from "@/types/auth";
 
+const LOCAL_STORAGE_KEY = "rescueai_user_profile";
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        try {
+          return JSON.parse(stored) as UserProfile;
+        } catch (e) {
+          console.warn("Error parsing initial user profile:", e);
+        }
+      }
+    }
+    return null;
+  });
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchProfile = async (user: User | null) => {
     if (user) {
       const profile = await getUserProfile(user.uid);
-      setUserProfile(profile);
+      if (profile) {
+        setUserProfile(profile);
+      }
     } else {
-      setUserProfile(null);
+      if (typeof window !== "undefined" && !localStorage.getItem(LOCAL_STORAGE_KEY)) {
+        setUserProfile(null);
+      }
     }
   };
 
@@ -43,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
       },
       (error) => {
-        console.warn("Firebase Auth error during initialization (Check NEXT_PUBLIC_FIREBASE_API_KEY in .env.local):", error);
+        console.warn("Firebase Auth error during initialization:", error);
         setLoading(false);
       }
     );
@@ -90,6 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await logoutUser();
       setCurrentUser(null);
       setUserProfile(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      }
     } finally {
       setLoading(false);
     }

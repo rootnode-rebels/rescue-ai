@@ -7,7 +7,6 @@ import {
   updateProfile,
   setPersistence,
   browserLocalPersistence,
-  browserSessionPersistence,
 } from "firebase/auth";
 import {
   doc,
@@ -19,9 +18,36 @@ import { auth, db, googleProvider } from "@/lib/firebase";
 import { RegisterFormData, LoginFormData, UserProfile, UserRole } from "@/types/auth";
 
 const USERS_COLLECTION = "users";
+const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
- * Fetches user profile from Firestore by UID.
+ * Saves user profile to localStorage for persistent sessions across page reloads & app restarts.
+ */
+function saveProfileToLocalStorage(profile: UserProfile): void {
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profile));
+    }
+  } catch (e) {
+    console.warn("Could not save profile to localStorage:", e);
+  }
+}
+
+/**
+ * Clears user profile from localStorage upon explicit logout.
+ */
+function clearProfileFromLocalStorage(): void {
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
+  } catch (e) {
+    console.warn("Could not clear profile from localStorage:", e);
+  }
+}
+
+/**
+ * Fetches user profile from Firestore by UID or fallback to localStorage.
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
@@ -29,24 +55,36 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const userSnapshot = await getDoc(userDocRef);
 
     if (userSnapshot.exists()) {
-      return userSnapshot.data() as UserProfile;
+      const profile = userSnapshot.data() as UserProfile;
+      saveProfileToLocalStorage(profile);
+      return profile;
     }
-    return null;
   } catch (error) {
-    console.error("Error fetching user profile from Firestore:", error);
-    return null;
+    console.warn("Error fetching user profile from Firestore, using local fallback:", error);
   }
+
+  // Fallback to localStorage if offline
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored) as UserProfile;
+      } catch (e) {
+        console.warn("Error parsing stored user profile:", e);
+      }
+    }
+  }
+  return null;
 }
 
 /**
  * Registers a new user with Email & Password.
- * Creates a Firestore user document with selected role, organization, and badge number.
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
+  await setPersistence(auth, browserLocalPersistence);
   const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
   const user = userCredential.user;
 
-  // Update Firebase Auth Display Name
   await updateProfile(user, { displayName: data.name });
 
   const now = new Date().toISOString();
@@ -64,29 +102,25 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
     status: "active",
   };
 
-  // Create Firestore Document safely
   try {
     await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
   } catch (err) {
-    console.warn("Firestore permission error when creating user document. Check Firestore Security Rules:", err);
+    console.warn("Firestore permission error when creating user document:", err);
   }
 
+  saveProfileToLocalStorage(newProfile);
   return newProfile;
 }
 
 /**
- * Signs in user with Email & Password.
- * Updates lastLogin in Firestore.
+ * Signs in user with Email & Password using browserLocalPersistence.
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
-  const persistenceMode = data.rememberMe ? browserLocalPersistence : browserSessionPersistence;
-  await setPersistence(auth, persistenceMode);
-
+  await setPersistence(auth, browserLocalPersistence);
   const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
   const user = userCredential.user;
   const now = new Date().toISOString();
 
-  // Fetch or update user profile
   let profile = await getUserProfile(user.uid);
 
   if (profile) {
@@ -97,7 +131,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
     profile.lastLogin = now;
   } else {
-    // Fallback if Firestore doc was missing
     profile = {
       uid: user.uid,
       name: user.displayName || "User",
@@ -116,14 +149,15 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
   }
 
+  saveProfileToLocalStorage(profile);
   return profile;
 }
 
 /**
- * Signs in or registers user via Google Authentication.
- * Automatically creates Firestore document with requested role if new user.
+ * Signs in or registers user via Google Authentication with browserLocalPersistence.
  */
 export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserProfile> {
+  await setPersistence(auth, browserLocalPersistence);
   const userCredential = await signInWithPopup(auth, googleProvider);
   const user = userCredential.user;
   const now = new Date().toISOString();
@@ -131,7 +165,6 @@ export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserP
   let profile = await getUserProfile(user.uid);
 
   if (!profile) {
-    // New Google User - Create Firestore doc with selected role
     profile = {
       uid: user.uid,
       name: user.displayName || "Google User",
@@ -149,7 +182,6 @@ export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserP
       console.warn("Firestore setDoc error:", err);
     }
   } else {
-    // Existing Google User - Update lastLogin
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), { lastLogin: now });
     } catch (err) {
@@ -158,13 +190,15 @@ export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserP
     profile.lastLogin = now;
   }
 
+  saveProfileToLocalStorage(profile);
   return profile;
 }
 
 /**
- * Logs out current authenticated user.
+ * Logs out current authenticated user and clears persistent session.
  */
 export async function logoutUser(): Promise<void> {
+  clearProfileFromLocalStorage();
   await signOut(auth);
 }
 
