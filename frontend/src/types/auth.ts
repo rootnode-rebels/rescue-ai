@@ -18,6 +18,8 @@ export interface UserProfile {
 export type SOSStatus =
   | "Pending"
   | "Accepted"
+  | "In Progress"
+  | "Resolved"
   | "Team On The Way"
   | "Reached"
   | "Completed"
