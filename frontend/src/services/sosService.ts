@@ -7,7 +7,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
+import { SOSFirestoreRequest, SOSStatus, SOSPriority } from "@/types/auth";
 
 const SOS_COLLECTION_1 = "sos_requests";
 const SOS_COLLECTION_2 = "sos";
@@ -33,7 +33,7 @@ function normalizeSOSDocument(docId: string, rawData: Record<string, unknown>): 
     userPhone: (rawData.userPhone as string) || (rawData.phone as string) || "+91 98765 43210",
     category: (rawData.category as string) || (rawData.disaster_type as string) || "FLOOD",
     description: (rawData.description as string) || "Emergency broadcast filed.",
-    priority: (rawData.priority as string) || "CRITICAL",
+    priority: (rawData.priority as SOSPriority) || "CRITICAL",
     status: (rawData.status as SOSStatus) || "Pending",
     latitude: parsedLat,
     longitude: parsedLng,
