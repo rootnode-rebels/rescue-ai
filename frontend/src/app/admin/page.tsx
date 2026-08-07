@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -23,8 +23,14 @@ import {
   Clock,
   Check,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
-import { UserRole, UserProfile } from "@/types/auth";
+import { UserRole, UserProfile, SOSFirestoreRequest } from "@/types/auth";
+import {
+  subscribeLiveSOSQueue,
+  deleteSOSRequestInFirestore,
+} from "@/services/sosService";
 
 const INITIAL_PENDING_APPLICATIONS: UserProfile[] = [
   {
@@ -32,7 +38,7 @@ const INITIAL_PENDING_APPLICATIONS: UserProfile[] = [
     name: "Capt. Alan Vance",
     email: "alan.vance@coastguard.gov",
     phone: "+1 (555) 902-1144",
-    role: "rescue",
+    role: "rescue_admin",
     organization: "Coast Guard Air Rescue Unit 9",
     badgeNumber: "CG-AIR-9081",
     photoURL: null,
@@ -70,7 +76,7 @@ const INITIAL_PENDING_APPLICATIONS: UserProfile[] = [
 
 export default function AdminDashboardPage() {
   const { userProfile } = useAuth();
-  const [role, setRole] = useState<UserRole>("rescue");
+  const [role, setRole] = useState<UserRole>("rescue_admin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -79,6 +85,15 @@ export default function AdminDashboardPage() {
   const [password, setPassword] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [pendingApps, setPendingApps] = useState<UserProfile[]>(INITIAL_PENDING_APPLICATIONS);
+  const [allSOS, setAllSOS] = useState<SOSFirestoreRequest[]>([]);
+
+  // Subscribe to real-time Firestore SOS queue
+  useEffect(() => {
+    const unsubscribe = subscribeLiveSOSQueue((list) => {
+      setAllSOS(list);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleCreateOfficial = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,15 +110,20 @@ export default function AdminDashboardPage() {
 
   const handleApproveApplication = (uid: string) => {
     setPendingApps((prev) => prev.filter((app) => app.uid !== uid));
-    setSuccessMsg(`Official Application ${uid} APPROVED! Account activated with role access.`);
+    setSuccessMsg(`Official Application ${uid} APPROVED! Credentials activated.`);
   };
 
   const handleRejectApplication = (uid: string) => {
     setPendingApps((prev) => prev.filter((app) => app.uid !== uid));
   };
 
+  const handleDeleteFakeSOS = async (requestId: string) => {
+    await deleteSOSRequestInFirestore(requestId);
+    setSuccessMsg(`Spam SOS ${requestId} purged from Firestore.`);
+  };
+
   return (
-    <ProtectedRoute allowedRoles={["authority", "rescue"]}>
+    <ProtectedRoute allowedRoles={["global_admin", "authority"]}>
       <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-red-500 selection:text-white">
         {/* Header Bar */}
         <header className="bg-slate-900 border-b border-slate-800 px-6 py-6 flex items-center justify-between">
@@ -113,17 +133,17 @@ export default function AdminDashboardPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-white">
-                Super Admin Command Console
+                Global Super Admin Dashboard
               </h1>
               <p className="text-xs text-slate-400 font-medium">
-                National EOC Approval &amp; Official Responder Provisioning Center
+                National EOC Management, Admin Provisioning &amp; Realtime Firestore Purge Console
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 rounded-2xl border border-slate-700 text-xs font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Super Admin Rights Active</span>
+            <span>Global Admin Rights Active ({userProfile?.name})</span>
           </div>
         </header>
 
@@ -136,103 +156,86 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <span>Encrypted Super Admin Authorization Node</span>
+                  <span>Cloud Firestore Global Authority Node</span>
                   <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono rounded-md">
-                    VERIFIED
+                    ACTIVE
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Full super admin privileges enabled. Review pending official registrations and dispatch nodes.
+                  Full control over user roles, rescue admin accounts, and spam SOS purges.
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 text-xs font-mono">
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-slate-300">
-                Pending Approvals: <strong className="text-amber-400">{pendingApps.length} APPLICANTS</strong>
+                Live Firestore SOS Signals: <strong className="text-red-400">{allSOS.length} ACTIVE</strong>
               </div>
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-slate-300">
-                System Health: <strong className="text-emerald-400">99.99% ONLINE</strong>
+                Pending Approvals: <strong className="text-amber-400">{pendingApps.length} APPLICANTS</strong>
               </div>
             </div>
           </div>
 
-          {/* Super Admin Approval Queue Section */}
+          {/* Real-time SOS Incident Purge Section */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-black text-white flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-amber-500" />
-                  <span>Pending Official Responder Registrations</span>
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <span>Real-Time Firestore SOS Directory (Global Purge)</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Rescue Teams, Volunteers, Hospitals, and NGOs requesting role access
+                  Inspect and purge fake or spam emergency requests from Cloud Firestore
                 </p>
               </div>
 
-              <span className="px-3 py-1 bg-amber-950 text-amber-300 border border-amber-800 text-xs font-bold rounded-full">
-                {pendingApps.length} PENDING REVIEW
+              <span className="px-3 py-1 bg-red-950 text-red-400 border border-red-800 text-xs font-bold rounded-full">
+                {allSOS.length} FIRESTORE DOCUMENTS
               </span>
             </div>
 
-            {pendingApps.length === 0 ? (
-              <div className="p-8 text-center bg-slate-950 rounded-2xl border border-slate-800">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <p className="text-xs font-bold text-slate-300">All official responder registrations have been reviewed!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {pendingApps.map((app) => (
-                  <div key={app.uid} className="p-5 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-sm font-black text-white">{app.name}</h4>
-                        <p className="text-[11px] text-slate-400">{app.email}</p>
-                      </div>
-                      <span className="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 text-[10px] font-mono rounded font-bold uppercase">
-                        {app.role}
-                      </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allSOS.map((sos) => (
+                <div key={sos.requestId} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-black text-white">{sos.citizenName}</h4>
+                      <p className="text-[11px] font-mono text-slate-400">{sos.requestId}</p>
                     </div>
-
-                    <div className="space-y-1 font-mono text-[11px] text-slate-300 border-t border-slate-900 pt-2">
-                      <p><strong className="text-slate-400">Unit:</strong> {app.organization}</p>
-                      <p><strong className="text-slate-400">Badge:</strong> {app.badgeNumber}</p>
-                      <p><strong className="text-slate-400">Phone:</strong> {app.phone}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        onClick={() => handleApproveApplication(app.uid)}
-                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 shadow-md"
-                      >
-                        <Check className="w-4 h-4" />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        onClick={() => handleRejectApplication(app.uid)}
-                        className="py-2 px-3 bg-slate-800 hover:bg-red-950 hover:text-red-400 text-slate-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Reject</span>
-                      </button>
-                    </div>
+                    <span className="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 text-[10px] font-mono font-bold rounded">
+                      {sos.priority}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+
+                  <p className="text-xs text-slate-300 line-clamp-2">{sos.description}</p>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-900 text-xs">
+                    <span className="text-slate-400 font-mono">Status: {sos.status}</span>
+                    <button
+                      onClick={() => handleDeleteFakeSOS(sos.requestId)}
+                      className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 shadow-md"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Fake SOS</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* 2 Column Layout: Direct Provisioning Form & Role Telemetry */}
+          {/* 2 Column Layout: Create Rescue Admin & System Controls */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column (7 cols): Create Official Account */}
+            {/* Left Column (7 cols): Create Rescue Admin Account */}
             <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
               <div>
                 <h3 className="text-xl font-black text-white flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-red-500" />
-                  <span>Directly Provision Official Account</span>
+                  <span>Provision Rescue Admin Account</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Exclusively authorized for Super Admins to add Rescue Officers, Authorities, Hospitals, and NGOs.
+                  Exclusively authorized for Global Admins to add Rescue Admins, EOC Officers, Hospitals, and NGOs.
                 </p>
               </div>
 
@@ -249,12 +252,11 @@ export default function AdminDashboardPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                     Official Role Type
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {[
-                      { id: "rescue", title: "Rescue Unit", icon: Ambulance },
-                      { id: "authority", title: "Authority", icon: ShieldCheck },
-                      { id: "hospital", title: "Hospital", icon: Building },
-                      { id: "ngo", title: "NGO Aid", icon: HeartHandshake },
+                      { id: "rescue_admin", title: "Rescue Admin", icon: Ambulance },
+                      { id: "hospital", title: "Hospital Admin", icon: Building },
+                      { id: "ngo", title: "NGO Relief Admin", icon: HeartHandshake },
                     ].map((item) => {
                       const IconComp = item.icon;
                       const isSelected = role === item.id;
@@ -304,7 +306,7 @@ export default function AdminDashboardPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="responder@rescueai.gov"
+                        placeholder="rescue.admin@rescueai.gov"
                         className="w-full h-11 pl-10 pr-4 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
@@ -379,50 +381,55 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="w-full h-12 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-red-950 transition-all mt-4"
                 >
-                  Provision &amp; Activate Credentials
+                  Provision Rescue Admin Credentials
                 </button>
               </form>
             </div>
 
-            {/* Right Column (5 cols): System Controls & Provisioned Nodes */}
+            {/* Right Column (5 cols): Pending Registrations Queue */}
             <div className="lg:col-span-5 space-y-6">
-              {/* Super Admin Control Panel */}
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
                 <h3 className="text-sm font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-red-500" />
-                  <span>Super Admin System Overrides</span>
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  <span>Pending Official Registrations</span>
                 </h3>
 
-                <div className="space-y-3 text-xs">
-                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-white">Emergency Broadcast Override</h4>
-                      <p className="text-[10px] text-slate-400">Trigger nationwide EOC alert banner</p>
-                    </div>
-                    <button className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase rounded-xl shadow-md">
-                      BROADCAST
-                    </button>
-                  </div>
+                {pendingApps.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium">No pending official registration applications.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingApps.map((app) => (
+                      <div key={app.uid} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="text-xs font-black text-white">{app.name}</h4>
+                            <p className="text-[10px] text-slate-400">{app.email}</p>
+                          </div>
+                          <span className="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 text-[9px] font-mono rounded font-bold uppercase">
+                            {app.role}
+                          </span>
+                        </div>
 
-                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-white">Gemini AI Triage Confidence Threshold</h4>
-                      <p className="text-[10px] text-slate-400">Auto-elevate priority at score &gt;= 0.85</p>
-                    </div>
-                    <span className="font-mono text-emerald-400 font-bold">0.85 OPTIMAL</span>
+                        <div className="flex items-center gap-2 pt-2">
+                          <button
+                            onClick={() => handleApproveApplication(app.uid)}
+                            className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 shadow-md"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => handleRejectApplication(app.uid)}
+                            className="py-1.5 px-3 bg-slate-800 hover:bg-red-950 hover:text-red-400 text-slate-400 text-[11px] font-bold rounded-lg flex items-center justify-center gap-1"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-white">FastAPI Backend Telemetry Node</h4>
-                      <p className="text-[10px] text-slate-400">Live Render microservices synchronization</p>
-                    </div>
-                    <span className="font-mono text-blue-400 font-bold flex items-center gap-1">
-                      <Radio className="w-3 h-3 animate-pulse" />
-                      CONNECTED
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

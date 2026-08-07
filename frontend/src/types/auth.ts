@@ -1,4 +1,4 @@
-export type UserRole = "citizen" | "rescue" | "authority" | "hospital" | "ngo";
+export type UserRole = "citizen" | "rescue_admin" | "global_admin" | "rescue" | "authority" | "hospital" | "ngo";
 
 export interface UserProfile {
   uid: string;
@@ -12,6 +12,49 @@ export interface UserProfile {
   createdAt: string;
   lastLogin: string;
   status: "active" | "suspended" | "pending" | "pending_approval";
+}
+
+export type SOSStatus = "Pending" | "Accepted" | "Team On The Way" | "Reached" | "Completed" | "Rejected" | "PENDING" | "ACCEPTED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type SOSPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+export interface SOSLocation {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  accuracy?: number;
+}
+
+export interface SOSFirestoreRequest {
+  requestId: string;
+  uid: string;
+  citizenName: string;
+  userPhone: string;
+  category: string;
+  description: string;
+  priority: SOSPriority;
+  status: SOSStatus;
+  latitude: number;
+  longitude: number;
+  address: string;
+  peopleCount: number;
+  medicalNeeds: boolean;
+  assignedRescue?: string;
+  assignedTeamName?: string;
+  createdAt: string;
+  updatedAt: string;
+  isOfflineCreated?: boolean;
+}
+
+export interface ShelterData {
+  shelterId: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  totalBeds: number;
+  availableBeds: number;
+  status: "OPEN" | "FULL" | "CLOSED";
+  phone: string;
 }
 
 export interface RegisterFormData {

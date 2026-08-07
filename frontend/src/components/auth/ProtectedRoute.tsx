@@ -12,6 +12,9 @@ interface ProtectedRouteProps {
 
 export const getRoleDashboard = (role?: UserRole): string => {
   switch (role) {
+    case "global_admin":
+      return "/admin";
+    case "rescue_admin":
     case "rescue":
     case "authority":
     case "hospital":

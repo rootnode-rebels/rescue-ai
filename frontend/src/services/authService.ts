@@ -72,7 +72,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (userSnapshot.exists()) {
       const profile = userSnapshot.data() as UserProfile;
       if (isSuperAdminEmail(profile.email)) {
-        profile.role = "authority";
+        profile.role = "global_admin";
       }
       saveProfileToLocalStorage(profile);
       return profile;
@@ -88,7 +88,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       try {
         const profile = JSON.parse(stored) as UserProfile;
         if (isSuperAdminEmail(profile.email)) {
-          profile.role = "authority";
+          profile.role = "global_admin";
         }
         return profile;
       } catch (e) {
@@ -101,7 +101,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 /**
  * Registers a new user with Email & Password.
- * Public self-registration is strictly for Citizens, unless email is in Super Admin Whitelist.
+ * Maps Super Admin Whitelist emails to global_admin automatically.
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -111,7 +111,10 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
   await updateProfile(user, { displayName: data.name });
 
   const isSuperAdmin = isSuperAdminEmail(data.email);
-  const assignedRole: UserRole = isSuperAdmin ? "authority" : "citizen";
+  let assignedRole: UserRole = data.role || "citizen";
+  if (isSuperAdmin) {
+    assignedRole = "global_admin";
+  }
 
   const now = new Date().toISOString();
   const newProfile: UserProfile = {
@@ -125,7 +128,7 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
     photoURL: user.photoURL || null,
     createdAt: now,
     lastLogin: now,
-    status: "active",
+    status: data.role === "citizen" || isSuperAdmin ? "active" : "pending_approval",
   };
 
   try {
@@ -152,7 +155,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 
   if (profile) {
     if (isSuperAdmin) {
-      profile.role = "authority";
+      profile.role = "global_admin";
     }
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
@@ -169,7 +172,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       name: user.displayName || "User",
       email: user.email || data.email,
       phone: user.phoneNumber || "",
-      role: isSuperAdmin ? "authority" : "citizen",
+      role: isSuperAdmin ? "global_admin" : "citizen",
       organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
       badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
       photoURL: user.photoURL || null,
@@ -189,7 +192,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 }
 
 /**
- * Signs in or registers user via Google Authentication with browserLocalPersistence.
+ * Signs in or registers user via Google Authentication.
  */
 export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -199,7 +202,7 @@ export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Prom
 
   let profile = await getUserProfile(user.uid);
   const isSuperAdmin = isSuperAdminEmail(user.email);
-  const assignedRole: UserRole = isSuperAdmin ? "authority" : requestedRole;
+  const assignedRole: UserRole = isSuperAdmin ? "global_admin" : requestedRole;
 
   if (!profile) {
     profile = {
@@ -222,7 +225,7 @@ export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Prom
     }
   } else {
     if (isSuperAdmin) {
-      profile.role = "authority";
+      profile.role = "global_admin";
     }
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
