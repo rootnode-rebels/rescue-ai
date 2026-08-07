@@ -24,32 +24,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        try {
-          return JSON.parse(stored) as UserProfile;
-        } catch (e) {
-          console.warn("Error parsing initial user profile:", e);
-        }
-      }
-    }
-    return null;
-  });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fetchProfile = async (user: User | null) => {
+  const fetchProfile = async (user: User | null): Promise<UserProfile | null> => {
     if (user) {
       const profile = await getUserProfile(user.uid);
       if (profile) {
         setUserProfile(profile);
+        return profile;
       }
     } else {
-      if (typeof window !== "undefined" && !localStorage.getItem(LOCAL_STORAGE_KEY)) {
-        setUserProfile(null);
+      setUserProfile(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
       }
     }
+    return null;
   };
 
   useEffect(() => {
@@ -57,7 +48,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       auth,
       async (user) => {
         setCurrentUser(user);
-        await fetchProfile(user);
+        if (user) {
+          await fetchProfile(user);
+        } else {
+          setUserProfile(null);
+        }
         setLoading(false);
       },
       (error) => {

@@ -33,6 +33,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { currentUser, userProfile, loading } = useAuth();
   const router = useRouter();
 
+  const isProfileReady = currentUser && userProfile && userProfile.uid === currentUser.uid;
+
   useEffect(() => {
     if (!loading) {
       // 1. Not authenticated -> Redirect to /login
@@ -41,22 +43,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
 
-      // 2. Role restriction check
-      if (allowedRoles && allowedRoles.length > 0 && userProfile) {
+      // 2. Role restriction check (only evaluate when profile is ready)
+      if (allowedRoles && allowedRoles.length > 0 && isProfileReady) {
         if (!allowedRoles.includes(userProfile.role)) {
           const targetDashboard = getRoleDashboard(userProfile.role);
           router.push(targetDashboard);
         }
       }
     }
-  }, [currentUser, userProfile, loading, allowedRoles, router]);
+  }, [currentUser, userProfile, loading, allowedRoles, router, isProfileReady]);
 
-  if (loading) {
+  if (loading || (currentUser && !isProfileReady)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100 font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-500 border-t-transparent shadow-lg shadow-red-500/50" />
-          <p className="text-sm font-semibold text-slate-400">Authenticating RescueAI session...</p>
+          <p className="text-sm font-semibold text-slate-400">Verifying RescueAI authorization &amp; role...</p>
         </div>
       </div>
     );
@@ -66,7 +68,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return null;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && userProfile && !allowedRoles.includes(userProfile.role)) {
+  if (allowedRoles && allowedRoles.length > 0 && isProfileReady && !allowedRoles.includes(userProfile.role)) {
     return null;
   }
 
