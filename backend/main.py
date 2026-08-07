@@ -1,6 +1,6 @@
 # FastAPI App Engine for RescueAI Emergency System
 import os
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -55,6 +55,10 @@ class SOSCreate(BaseModel):
 class RoleUpdate(BaseModel):
     role: str
 
+class TriageAnalyzeRequest(BaseModel):
+    description: str
+    structured_fields: Optional[dict] = {}
+
 @app.get("/")
 @app.get("/health")
 async def health_check():
@@ -92,6 +96,55 @@ async def create_sos(payload: SOSCreate, authorization: Optional[str] = Header(N
         "priority_score": score,
         "priority_label": label,
         "confidence": conf,
+        "reasons": reasons,
+    }
+
+@app.post("/api/triage/analyze")
+@app.post("/api/v1/triage/analyze")
+async def analyze_triage(payload: TriageAnalyzeRequest):
+    score, label, conf, reasons = triage_module.triage_score({
+        "description": payload.description,
+        "structured_fields": payload.structured_fields
+    })
+
+    guidance: List[str] = []
+    text = payload.description.lower()
+    if "earthquake" in text:
+        guidance = [
+            "DROP onto your hands and knees to prevent falling.",
+            "COVER your head and neck under a sturdy table or desk.",
+            "HOLD ON to your shelter until shaking completely stops.",
+            "Move away from glass, windows, and heavy unanchored items.",
+        ]
+    elif "fire" in text or "smoke" in text:
+        guidance = [
+            "Get low under smoke and crawl to the nearest exit.",
+            "Feel door handles before opening — if hot, do not open.",
+            "Signal for help at windows if trapped.",
+            "Call Fire Department immediately at 101.",
+        ]
+    elif "flood" in text or "water" in text:
+        guidance = [
+            "Move to upper floors or rooftop immediately.",
+            "Do NOT walk or drive through moving floodwaters.",
+            "Signal rescue helicopters with flashlights or bright garments.",
+            "Stay away from downed power lines.",
+        ]
+    else:
+        guidance = [
+            "Move to a safe, elevated location away from immediate danger.",
+            "Maintain emergency communications via #112 or RescueAI portal.",
+            "Keep mobile location telemetry enabled for live rescue tracking.",
+        ]
+
+    return {
+        "ok": True,
+        "priority": label.upper(),
+        "priority_score": score,
+        "category": "DISASTER EMERGENCY",
+        "summary": f"Incident evaluated as {label.upper()} priority (Severity Score {score}/100).",
+        "survival_guidance": guidance,
+        "recommended_action": "Dispatch Nearest Response Unit & Stream Coordinates",
         "reasons": reasons,
     }
 
