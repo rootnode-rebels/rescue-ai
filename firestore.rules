@@ -1,15 +1,18 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /sos/{docId} {
-      allow read: if request.auth != null && (request.auth.token.role == 'rescue_officer' || request.auth.token.role == 'eoc');
-      allow create: if true;  // allow any client to create for demo
-      allow update: if request.auth != null && (request.auth.token.role == 'rescue_officer' || request.auth.token.role == 'eoc');
-    }
+    
+    // Allow authenticated users to read and write user profile documents
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if true;
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
-    match /{document=**} { allow read, write: if false; } // lock down others
+
+    // Default rule for all other documents during development
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
