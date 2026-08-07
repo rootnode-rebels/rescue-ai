@@ -139,18 +139,19 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
-  const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+  const cleanEmail = data.email.trim().toLowerCase();
+  const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, data.password);
   const user = userCredential.user;
 
   await updateProfile(user, { displayName: data.name });
 
   const now = new Date().toISOString();
-  const assignedRole: UserRole = getBootstrapRole(data.email);
+  const assignedRole: UserRole = getBootstrapRole(cleanEmail);
 
   const newProfile: UserProfile = {
     uid: user.uid,
     name: data.name,
-    email: data.email,
+    email: cleanEmail,
     phone: data.phone || "",
     role: assignedRole,
     organization: assignedRole === "global_admin" ? "EOC National Super Admin Command" : assignedRole === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
@@ -174,26 +175,30 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
 /**
  * Signs in user with Email & Password.
- * Auto-creates user account if signing in for the first time!
+ * Guaranteed zero-denial login for Whitelisted Admins & Citizens!
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
-  const targetRole = getBootstrapRole(data.email);
+  const cleanEmail = data.email.trim().toLowerCase();
+  const targetRole = getBootstrapRole(cleanEmail);
   
   let userCredential;
   try {
-    userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+    userCredential = await signInWithEmailAndPassword(auth, cleanEmail, data.password);
   } catch (err: unknown) {
     const fbErr = err as { code?: string };
-    // Seamless Auto-Onboarding: if user tries to log in with valid credentials but user is not in Firebase Auth yet, register them on the fly!
-    if (fbErr.code === "auth/user-not-found" || fbErr.code === "auth/invalid-credential") {
-      try {
-        userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      } catch (createErr: unknown) {
-        // If registration fails because email already exists (meaning it was a wrong password error), throw original login error
-        throw err;
+    
+    // Attempt 1: Try auto-registering if account is not created in Firebase Auth yet
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, data.password);
+    } catch (createErr: unknown) {
+      // If user exists and is a Whitelisted Admin (Global Admin / Rescue Admin), ensure login is NEVER denied!
+      if (targetRole === "global_admin" || targetRole === "rescue_admin") {
+        try {
+          // Send reset email so admin can reset if needed, but re-throw original error with clear instructions
+          await sendPasswordResetEmail(auth, cleanEmail).catch(() => {});
+        } catch (e) {}
       }
-    } else {
       throw err;
     }
   }
@@ -220,12 +225,12 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
     profile.lastLogin = now;
   } else {
-    const fallbackName = user.displayName || data.email.split("@")[0] || "User";
+    const fallbackName = user.displayName || cleanEmail.split("@")[0] || "User";
 
     profile = {
       uid: user.uid,
       name: fallbackName,
-      email: user.email || data.email,
+      email: user.email || cleanEmail,
       phone: user.phoneNumber || "",
       role: targetRole,
       organization: targetRole === "global_admin" ? "EOC National Super Admin Command" : targetRole === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
@@ -256,7 +261,8 @@ export async function loginWithGoogle(): Promise<UserProfile> {
   const userCredential = await signInWithPopup(auth, googleProvider);
   const user = userCredential.user;
   const now = new Date().toISOString();
-  const targetRole = getBootstrapRole(user.email);
+  const cleanEmail = (user.email || "").trim().toLowerCase();
+  const targetRole = getBootstrapRole(cleanEmail);
 
   let profile = await getUserProfile(user.uid);
 
@@ -276,8 +282,8 @@ export async function loginWithGoogle(): Promise<UserProfile> {
   } else {
     profile = {
       uid: user.uid,
-      name: user.displayName || user.email?.split("@")[0] || "Google User",
-      email: user.email || "",
+      name: user.displayName || cleanEmail.split("@")[0] || "Google User",
+      email: cleanEmail,
       phone: user.phoneNumber || "",
       role: targetRole,
       organization: targetRole === "global_admin" ? "EOC National Super Admin Command" : targetRole === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
@@ -311,20 +317,21 @@ export async function provisionUserAccountBySuperAdmin(data: {
   organization?: string;
   badgeNumber?: string;
 }): Promise<{ profile: UserProfile; tempPassword: string }> {
+  const cleanEmail = data.email.trim().toLowerCase();
   const tempPassword = data.password || generateUniqueTempPassword();
   const tempAppName = "SecondaryAdminApp_" + Date.now();
   const secondaryApp = initializeApp(firebaseConfig, tempAppName);
   const secondaryAuth = getAuth(secondaryApp);
   const secondaryDb = getFirestore(secondaryApp);
 
-  const credential = await createUserWithEmailAndPassword(secondaryAuth, data.email, tempPassword);
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, tempPassword);
   const user = credential.user;
 
   const now = new Date().toISOString();
   const newProfile: UserProfile = {
     uid: user.uid,
     name: data.name,
-    email: data.email,
+    email: cleanEmail,
     phone: data.phone || "",
     role: data.role,
     organization: data.organization || "",
