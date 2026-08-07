@@ -70,7 +70,7 @@ export const SOSModuleLayout: React.FC = () => {
         if (res.ok) {
           const result = await res.json();
           if (result.priority) {
-            setActiveSOS((prev) => (prev ? { ...prev, priority: result.priority, status: "DISPATCHED" } : null));
+            setActiveSOS((prev) => (prev ? { ...prev, priority: result.priority, status: "IN_PROGRESS" } : null));
           }
         }
       } catch (err) {
