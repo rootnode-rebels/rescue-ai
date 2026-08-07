@@ -24,7 +24,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          return JSON.parse(stored) as UserProfile;
+        }
+      } catch (e) {}
+    }
+    return null;
+  });
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchProfile = async (user: User | null): Promise<UserProfile | null> => {
@@ -35,10 +45,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return profile;
       }
     } else {
-      setUserProfile(null);
       if (typeof window !== "undefined") {
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          try {
+            const profile = JSON.parse(stored) as UserProfile;
+            if (profile && profile.uid) {
+              setUserProfile(profile);
+              return profile;
+            }
+          } catch (e) {}
+        }
       }
+      setUserProfile(null);
     }
     return null;
   };
@@ -51,7 +70,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (user) {
           await fetchProfile(user);
         } else {
-          setUserProfile(null);
+          // Rehydrate from localStorage if session token exists
+          if (typeof window !== "undefined") {
+            const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (stored) {
+              try {
+                const cachedProfile = JSON.parse(stored) as UserProfile;
+                if (cachedProfile && cachedProfile.uid) {
+                  setUserProfile(cachedProfile);
+                } else {
+                  setUserProfile(null);
+                }
+              } catch (e) {
+                setUserProfile(null);
+              }
+            } else {
+              setUserProfile(null);
+            }
+          }
         }
         setLoading(false);
       },

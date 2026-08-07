@@ -25,6 +25,8 @@ import { auth, db, googleProvider, firebaseConfig } from "@/lib/firebase";
 import { RegisterFormData, LoginFormData, UserProfile, UserRole } from "@/types/auth";
 
 const USERS_COLLECTION = "users";
+const AUDIT_LOGS_COLLECTION = "audit_logs";
+const SHELTER_BOOKINGS_COLLECTION = "shelter_bookings";
 const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
@@ -101,6 +103,117 @@ function clearProfileFromLocalStorage(): void {
 }
 
 /**
+ * Interface for Intelligent User Audit Log Entries.
+ */
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actorEmail: string;
+  actorName: string;
+  actionCategory: "AUTHENTICATION" | "SECURITY_AUDIT" | "CRITICAL_DISPATCH" | "RESERVATION" | "ROLE_MODIFICATION";
+  description: string;
+  deviceFingerprint: string;
+  riskScore: "LOW_RISK" | "ADMIN_ACTION" | "HIGH_PRIORITY";
+}
+
+/**
+ * Interface for Evacuation Shelter Booking Records.
+ */
+export interface ShelterBookingRecord {
+  bookingId: string;
+  shelterId: string;
+  shelterName: string;
+  userEmail: string;
+  userName: string;
+  evacueeCount: number;
+  specialAssistance: boolean;
+  status: "CONFIRMED" | "CHECKED_IN" | "CANCELLED";
+  bookedAt: string;
+}
+
+/**
+ * Logs an Intelligent Audit Event to Cloud Firestore.
+ */
+export async function logUserActivityInFirestore(entry: Partial<AuditLogEntry>): Promise<void> {
+  try {
+    const logId = entry.id || "audit-" + Date.now();
+    const fullLog: AuditLogEntry = {
+      id: logId,
+      timestamp: entry.timestamp || new Date().toISOString(),
+      actorEmail: entry.actorEmail || "system@rescueai.org",
+      actorName: entry.actorName || "System Service",
+      actionCategory: entry.actionCategory || "AUTHENTICATION",
+      description: entry.description || "System audit event registered.",
+      deviceFingerprint: entry.deviceFingerprint || "Web Browser (Mobile/Desktop)",
+      riskScore: entry.riskScore || "LOW_RISK",
+    };
+    await setDoc(doc(db, AUDIT_LOGS_COLLECTION, logId), fullLog);
+  } catch (err) {
+    console.warn("Error writing audit log:", err);
+  }
+}
+
+/**
+ * Subscribes to real-time Intelligent Audit Logs for Super Admin Console.
+ */
+export function subscribeIntelligentAuditLogs(callback: (logs: AuditLogEntry[]) => void): () => void {
+  try {
+    const ref = collection(db, AUDIT_LOGS_COLLECTION);
+    return onSnapshot(
+      ref,
+      (snapshot) => {
+        const list: AuditLogEntry[] = [];
+        snapshot.forEach((docSnap) => {
+          if (docSnap.exists()) {
+            list.push(docSnap.data() as AuditLogEntry);
+          }
+        });
+        list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        callback(list);
+      },
+      (err) => console.warn("Audit logs stream notice:", err)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * Books an Evacuation Spot at a Relief Shelter in Cloud Firestore.
+ */
+export async function bookShelterSpotInFirestore(data: Partial<ShelterBookingRecord>): Promise<ShelterBookingRecord> {
+  const bookingId = "SHELTER-BOK-" + Math.floor(1000 + Math.random() * 9000);
+  const now = new Date().toISOString();
+
+  const record: ShelterBookingRecord = {
+    bookingId,
+    shelterId: data.shelterId || "shelter-01",
+    shelterName: data.shelterName || "Central Evacuation Shelter",
+    userEmail: data.userEmail || "citizen@rescueai.org",
+    userName: data.userName || "Citizen Evacuee",
+    evacueeCount: data.evacueeCount || 1,
+    specialAssistance: data.specialAssistance ?? false,
+    status: "CONFIRMED",
+    bookedAt: now,
+  };
+
+  try {
+    await setDoc(doc(db, SHELTER_BOOKINGS_COLLECTION, bookingId), record);
+    await logUserActivityInFirestore({
+      actorEmail: record.userEmail,
+      actorName: record.userName,
+      actionCategory: "RESERVATION",
+      description: `Booked Evacuation Spot for ${record.evacueeCount} person(s) at "${record.shelterName}" [Receipt: ${bookingId}]`,
+      riskScore: "LOW_RISK",
+    });
+  } catch (err) {
+    console.warn("Shelter spot booking notice:", err);
+  }
+
+  return record;
+}
+
+/**
  * Fetches user profile strictly from Firestore `users/{uid}` document.
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -117,7 +230,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     console.warn("Error fetching user profile from Firestore:", error);
   }
 
-  // Fallback to localStorage ONLY IF stored profile UID matches requested UID
   if (typeof window !== "undefined") {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
@@ -165,6 +277,13 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
   try {
     await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
+    await logUserActivityInFirestore({
+      actorEmail: cleanEmail,
+      actorName: data.name,
+      actionCategory: "AUTHENTICATION",
+      description: `New Citizen Account Registered (${cleanEmail})`,
+      riskScore: "LOW_RISK",
+    });
   } catch (err) {
     console.warn("Firestore error when creating user document:", err);
   }
@@ -186,16 +305,11 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   try {
     userCredential = await signInWithEmailAndPassword(auth, cleanEmail, data.password);
   } catch (err: unknown) {
-    const fbErr = err as { code?: string };
-    
-    // Attempt 1: Try auto-registering if account is not created in Firebase Auth yet
     try {
       userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, data.password);
     } catch (createErr: unknown) {
-      // If user exists and is a Whitelisted Admin (Global Admin / Rescue Admin), ensure login is NEVER denied!
       if (targetRole === "global_admin" || targetRole === "rescue_admin") {
         try {
-          // Send reset email so admin can reset if needed, but re-throw original error with clear instructions
           await sendPasswordResetEmail(auth, cleanEmail).catch(() => {});
         } catch (e) {}
       }
@@ -248,6 +362,14 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       console.warn("Firestore setDoc error:", err);
     }
   }
+
+  await logUserActivityInFirestore({
+    actorEmail: profile.email,
+    actorName: profile.name,
+    actionCategory: "AUTHENTICATION",
+    description: `User Authenticated Successfully (${profile.role.toUpperCase()})`,
+    riskScore: profile.role === "citizen" ? "LOW_RISK" : "ADMIN_ACTION",
+  });
 
   saveProfileToLocalStorage(profile);
   return profile;
@@ -340,7 +462,7 @@ export async function provisionUserAccountBySuperAdmin(data: {
     createdAt: now,
     lastLogin: now,
     status: "active",
-    mustChangePassword: true, // Force Password Change on First Login
+    mustChangePassword: true,
   };
 
   try {
@@ -351,6 +473,13 @@ export async function provisionUserAccountBySuperAdmin(data: {
 
   try {
     await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
+    await logUserActivityInFirestore({
+      actorEmail: cleanEmail,
+      actorName: data.name,
+      actionCategory: "SECURITY_AUDIT",
+      description: `Account Provisioned by Super Admin (${data.role.toUpperCase()})`,
+      riskScore: "ADMIN_ACTION",
+    });
   } catch (e) {
     console.warn("Primary DB setDoc notice:", e);
   }
@@ -415,6 +544,11 @@ export async function updateUserRoleInFirestore(uid: string, newRole: UserRole):
   try {
     const docRef = doc(db, USERS_COLLECTION, uid);
     await updateDoc(docRef, { role: newRole, status: "active" });
+    await logUserActivityInFirestore({
+      actionCategory: "ROLE_MODIFICATION",
+      description: `Role updated for user UID ${uid.slice(0, 6)} to ${newRole.toUpperCase()}`,
+      riskScore: "ADMIN_ACTION",
+    });
   } catch (err) {
     console.warn("Error updating user role in Firestore:", err);
   }

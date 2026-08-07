@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../dashboard/Sidebar";
 import { TopNavbar } from "../dashboard/TopNavbar";
-import { StatsCard } from "../ui/StatsCard";
-import { BottomMobileNav } from "../dashboard/BottomMobileNav";
 import {
   ShieldAlert,
   Ambulance,
@@ -18,26 +16,29 @@ import {
   Flame,
   Phone,
   MapPin,
-  CheckCheck,
-  PlusCircle,
   Clock,
   Compass,
+  AlertTriangle,
 } from "lucide-react";
 import {
   subscribeLiveSOSQueue,
   updateSOSStatusInFirestore,
-  createSOSRequestInFirestore,
 } from "@/services/sosService";
 import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export const RescueDashboardLayout: React.FC = () => {
+  const { userProfile, logout } = useAuth();
   const [requests, setRequests] = useState<SOSFirestoreRequest[]>([]);
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
-  const [filterStatus] = useState<string>("ALL");
   const [lastSyncedTime, setLastSyncedTime] = useState<string>("");
   const [activeSOSForMap, setActiveSOSForMap] = useState<SOSFirestoreRequest | null>(null);
 
-  // Firestore onSnapshot() Real-time Queue Subscription
+  // Rescue Base Coordinates (India Command Grid)
+  const baseLat = 12.9716;
+  const baseLng = 77.5946;
+
+  // Real-time Firestore Queue Subscription (Dual Collection Stream: sos_requests + sos)
   useEffect(() => {
     const unsubscribe = subscribeLiveSOSQueue((liveList) => {
       setRequests(liveList);
@@ -58,373 +59,267 @@ export const RescueDashboardLayout: React.FC = () => {
     await updateSOSStatusInFirestore(requestId, status, "Coast Guard Rescue Alpha");
   };
 
-  const handleNavigate = (lat: number, lng: number) => {
-    window.open(`https://maps.google.com/?q=${lat},${lng}`, "_blank");
+  // Calculate distance from rescue base
+  const getDistanceMiles = (lat: number, lng: number) => {
+    const dLat = (lat - baseLat) * 69;
+    const dLng = (lng - baseLng) * 54.6;
+    const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+    return dist < 0.1 ? "0.2 mi" : `${dist.toFixed(1)} mi`;
   };
 
-  const handleGenerateTestSOS = async () => {
-    const testId = "sos-" + Date.now();
-    await createSOSRequestInFirestore({
-      requestId: testId,
-      citizenName: "Sarah Jenkins",
-      userPhone: "+1 (555) 987-6543",
-      category: "FLOOD",
-      description: "Flood water trapped 3 citizens in residential sector. Need boat evacuation urgently.",
-      priority: "CRITICAL",
-      status: "Pending",
-      latitude: 37.7749 + (Math.random() - 0.5) * 0.02,
-      longitude: -122.4194 + (Math.random() - 0.5) * 0.02,
-      address: "Sector 4 Emergency Flood Zone",
-      peopleCount: 3,
-      medicalNeeds: true,
-    });
-  };
-
-  const filteredRequests = requests.filter((req) => {
-    if (filterPriority !== "ALL" && req.priority !== filterPriority) return false;
-    if (filterStatus !== "ALL" && req.status !== filterStatus) return false;
-    return true;
+  const filteredRequests = requests.filter((r) => {
+    if (filterPriority === "ALL") return true;
+    return r.priority === filterPriority;
   });
 
-  const criticalCount = requests.filter((r) => r.priority === "CRITICAL" && r.status !== "Completed").length;
-  const activeCount = requests.filter((r) => r.status !== "Completed").length;
-  const resolvedCount = requests.filter((r) => r.status === "Completed").length;
-
-  const currentMapLat = activeSOSForMap?.latitude || (requests.length > 0 ? requests[0].latitude : 37.7749);
-  const currentMapLng = activeSOSForMap?.longitude || (requests.length > 0 ? requests[0].longitude : -122.4194);
+  const criticalCount = requests.filter((r) => r.priority === "CRITICAL").length;
+  const inProgressCount = requests.filter((r) => r.status === "Accepted" || r.status === "In Progress").length;
+  const resolvedCount = requests.filter((r) => r.status === "Resolved").length;
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-red-500 selection:text-white pb-16 lg:pb-0">
-      {/* Left Sidebar */}
+    <div className="flex min-h-screen bg-slate-900 text-slate-100 font-sans overflow-x-hidden">
+      {/* Permanent Left Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar activeView="rescue-dashboard" onSelectView={() => {}} />
       </div>
 
-      {/* Main Container */}
+      {/* Main Tactical Container */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar */}
-        <TopNavbar />
-
-        {/* Operational Main Content */}
-        <main className="flex-1 p-6 sm:p-8 space-y-8 max-w-7xl w-full mx-auto">
-          {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+        <div className="bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-600/20 border border-red-500/30 text-red-500 rounded-xl animate-pulse">
+              <Radio className="w-5 h-5" />
+            </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap mb-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-950/80 border border-red-800 text-red-400 text-xs font-black uppercase tracking-wider rounded-full">
-                  <Radio className="w-3.5 h-3.5 text-red-500 animate-pulse" />
-                  <span>FIELD COMMAND DISPATCH CENTER</span>
-                </div>
-
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-xs font-mono font-bold rounded-full">
-                  <Zap className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
-                  <span>FIRESTORE REAL-TIME WEBSOCKET FEED ({requests.length} SIGNALS)</span>
-                  {lastSyncedTime && <span className="text-slate-400">• SYNC {lastSyncedTime}</span>}
-                </div>
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                Rescue Operational Board
-              </h1>
-              <p className="text-xs text-slate-400 font-medium mt-1">
-                Real-time incident dispatch, live map markers, and Firestore status sync.
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                <span>NDRF Rescue Command Operations Console</span>
+                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-bold text-[10px] rounded-full">
+                  LIVE TELEMETRY
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400 font-medium">
+                Real-Time Dual Collection Sync • Last synced at {lastSyncedTime || "Just Now"}
               </p>
             </div>
+          </div>
 
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-300 font-mono">
+              <Compass className="w-4 h-4 text-blue-400" />
+              <span>Grid Base: 12.97° N, 77.59° E</span>
+            </div>
             <button
-              onClick={handleGenerateTestSOS}
-              className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-red-950 transition-all uppercase tracking-wider self-start sm:self-auto"
+              onClick={() => logout()}
+              className="px-3.5 py-2 bg-red-950/60 hover:bg-red-900 text-red-400 border border-red-800/60 rounded-xl text-xs font-extrabold transition-all"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>Simulate Citizen SOS</span>
+              Log Out
             </button>
           </div>
+        </div>
 
-          {/* Operational Metrics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard
-              title="CRITICAL EMERGENCIES"
-              value={criticalCount}
-              subtitle="Requires immediate dispatch"
-              icon={ShieldAlert}
-              variant="emergency"
-            />
-            <StatsCard
-              title="ACTIVE DISPATCHES"
-              value={activeCount}
-              subtitle="Units in field operation"
-              icon={Ambulance}
-              variant="warning"
-            />
-            <StatsCard
-              title="RESOLVED INCIDENTS"
-              value={resolvedCount}
-              subtitle="Successfully rescued"
-              icon={CheckCircle2}
-              variant="success"
-            />
-            <StatsCard
-              title="DEPLOYED PERSONNEL"
-              value="48 Officers"
-              subtitle="Across 6 response sectors"
-              icon={Users}
-              variant="info"
-            />
+        {/* Dashboard Main View Area */}
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
+          {/* Tactical Stats Header */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
+              <div className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white">{criticalCount}</p>
+                <p className="text-xs text-slate-400 font-semibold">Critical SOS Queue</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
+              <div className="p-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl">
+                <Ambulance className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white">{inProgressCount}</p>
+                <p className="text-xs text-slate-400 font-semibold">Active Rescues En Route</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
+              <div className="p-3 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white">{resolvedCount}</p>
+                <p className="text-xs text-slate-400 font-semibold">Resolved Rescues</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
+              <div className="p-3 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-2xl font-black text-white">{requests.length}</p>
+                <p className="text-xs text-slate-400 font-semibold">Total Grid Incidents</p>
+              </div>
+            </div>
           </div>
 
-          {/* 2-Column Main Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Main SOS Triage Queue (7 cols) */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Queue Controls & Filters */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/90 border border-slate-800 rounded-2xl">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-                  <Filter className="w-4 h-4 text-red-500" />
-                  <span>Priority Filter:</span>
-                </div>
+          {/* Priority Filters */}
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((prio) => (
+                <button
+                  key={prio}
+                  onClick={() => setFilterPriority(prio)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    filterPriority === prio
+                      ? "bg-red-600 text-white shadow-md shadow-red-950"
+                      : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
+                  }`}
+                >
+                  {prio}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+              Streaming {filteredRequests.length} Verified Incidents
+            </span>
+          </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setFilterPriority(p)}
-                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                        filterPriority === p
-                          ? "bg-red-600 text-white shadow-md shadow-red-950"
-                          : "bg-slate-800 text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
+          {/* Incidents Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Queue List (7 Cols) */}
+            <div className="lg:col-span-7 space-y-4">
+              {filteredRequests.length === 0 ? (
+                <div className="p-12 text-center bg-slate-950/60 border border-slate-800 rounded-3xl text-slate-500 text-xs font-mono">
+                  No active incidents matching selected priority filter.
                 </div>
-              </div>
-
-              {/* Triage Queue Incident Cards */}
-              <div className="space-y-4">
-                {filteredRequests.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-900/80 rounded-3xl border border-slate-800 space-y-4">
-                    <Radio className="w-10 h-10 text-red-500 mx-auto animate-pulse" />
-                    <div>
-                      <h4 className="text-base font-black text-white">No Live SOS Signals in Firestore</h4>
-                      <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                        When a citizen presses the SOS button on their dashboard, their emergency details and live GPS coordinates will appear here instantly via Cloud Firestore onSnapshot().
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleGenerateTestSOS}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md inline-flex items-center gap-1.5"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      <span>Create Test SOS Signal</span>
-                    </button>
-                  </div>
-                ) : (
-                  filteredRequests.map((req) => (
+              ) : (
+                filteredRequests.map((req) => {
+                  const dist = getDistanceMiles(req.latitude, req.longitude);
+                  return (
                     <div
                       key={req.requestId}
                       onClick={() => setActiveSOSForMap(req)}
-                      className={`p-5 bg-slate-900 border rounded-3xl space-y-4 shadow-xl cursor-pointer transition-all ${
+                      className={`p-5 bg-slate-950/90 border rounded-3xl space-y-4 transition-all duration-200 cursor-pointer ${
                         activeSOSForMap?.requestId === req.requestId
-                          ? "border-red-500 ring-2 ring-red-500/20"
+                          ? "border-red-500 ring-2 ring-red-500/20 shadow-xl shadow-red-950/30"
                           : "border-slate-800 hover:border-slate-700"
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <div className="p-2 bg-red-600/20 text-red-500 rounded-xl border border-red-500/30">
-                            <Flame className="w-5 h-5" />
-                          </div>
+                          <span className="p-2 bg-red-600/20 text-red-500 rounded-xl border border-red-500/30">
+                            <Flame className="w-4 h-4" />
+                          </span>
                           <div>
-                            <h4 className="text-base font-black text-white flex items-center gap-2">
-                              <span>{req.citizenName}</span>
-                              <span className="text-xs font-mono font-normal text-slate-400">
-                                ({req.requestId})
-                              </span>
-                            </h4>
-                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                              <Phone className="w-3 h-3 text-emerald-400" />
-                              <span>{req.userPhone}</span>
-                            </p>
+                            <h4 className="text-sm font-black text-white">{req.citizenName}</h4>
+                            <p className="text-[11px] text-slate-400 font-mono">{req.requestId} • {req.userPhone}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 bg-red-600 text-white font-black text-[10px] uppercase rounded-full">
+                          <span className="px-2.5 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 font-mono font-extrabold text-[10px] rounded-full">
                             {req.priority}
                           </span>
-                          <span className="px-2.5 py-0.5 bg-slate-800 text-amber-400 font-mono font-bold text-[10px] uppercase rounded-full border border-slate-700">
+                          <span className="px-2.5 py-0.5 bg-slate-800 text-slate-300 font-bold text-[10px] rounded-full">
                             {req.status}
                           </span>
                         </div>
                       </div>
 
-                      <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                      <p className="text-xs text-slate-300 font-medium leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
                         {req.description}
                       </p>
 
-                      <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono gap-2 text-slate-300">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-red-400" />
-                          <span className="text-emerald-400 font-bold">
-                            GPS Live: {req.latitude.toFixed(4)}° N, {req.longitude.toFixed(4)}° W
-                          </span>
-                        </div>
-                        <span className="text-slate-400">{req.peopleCount} People Affected</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono pt-1 text-slate-400">
+                        <span className="flex items-center gap-1.5 text-red-400">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>{req.latitude.toFixed(4)}° N, {req.longitude.toFixed(4)}° E ({dist})</span>
+                        </span>
+                        <span>Assigned: <strong className="text-white">{req.assignedTeamName || "Unassigned"}</strong></span>
                       </div>
 
-                      {/* Status Action Buttons */}
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {(req.status === "Pending" || req.status === "PENDING") && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAcceptRequest(req.requestId);
-                            }}
-                            className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all uppercase tracking-wider"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>1. Accept SOS</span>
-                          </button>
-                        )}
-
-                        {req.status === "Accepted" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSetStatus(req.requestId, "Team On The Way");
-                            }}
-                            className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all uppercase tracking-wider"
-                          >
-                            <Ambulance className="w-4 h-4" />
-                            <span>2. Dispatch Team En Route</span>
-                          </button>
-                        )}
-
-                        {req.status === "Team On The Way" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSetStatus(req.requestId, "Reached");
-                            }}
-                            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all uppercase tracking-wider"
-                          >
-                            <MapPin className="w-4 h-4" />
-                            <span>3. Mark Reached Site</span>
-                          </button>
-                        )}
-
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-2 border-t border-slate-900">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleNavigate(req.latitude, req.longitude);
+                            handleAcceptRequest(req.requestId);
                           }}
-                          className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
+                          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all uppercase"
                         >
-                          <Navigation className="w-4 h-4 text-blue-400" />
-                          <span>Google Maps GPS</span>
+                          Accept &amp; Dispatch Team
                         </button>
-
-                        {req.status !== "Completed" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSetStatus(req.requestId, "Completed");
-                            }}
-                            className="py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
-                          >
-                            <CheckCheck className="w-4 h-4" />
-                            <span>Mark Resolved</span>
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSetStatus(req.requestId, "Resolved");
+                          }}
+                          className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs rounded-xl transition-all"
+                        >
+                          Mark Resolved
+                        </button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  );
+                })
+              )}
             </div>
 
-            {/* Right Map & Telemetry Panel (5 cols) */}
-            <div className="lg:col-span-5 space-y-6">
-              {/* Embedded Live Google Geospatial Emergency Map */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
-                      <Compass className="w-4 h-4 text-red-500" />
-                      <span>Live GIS Telemetry Map</span>
-                    </h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {activeSOSForMap ? `Tracking ${activeSOSForMap.citizenName}` : "Showing Sector 4 Emergency Grid"}
-                    </p>
+            {/* Right Tactical Map Telemetry Panel (5 Cols) */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="bg-slate-950/90 border border-slate-800 rounded-3xl p-5 space-y-4 sticky top-24">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Navigation className="w-5 h-5 text-blue-400 animate-pulse" />
+                    <h3 className="text-sm font-black text-white">Live Telemetry Map Vector</h3>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-950 text-red-400 border border-red-800">
-                    GPS TRACKED
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    BEACON ACTIVE
                   </span>
                 </div>
 
-                <div className="relative h-80 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
-                  <iframe
-                    title="Live Incident Map"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    scrolling="no"
-                    src={`https://maps.google.com/maps?q=${currentMapLat},${currentMapLng}&z=15&output=embed`}
-                    className="w-full h-full grayscale-[20%] contrast-[1.1]"
-                  />
-
-                  <div className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-800 text-xs font-mono text-slate-200 flex justify-between items-center">
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {currentMapLat.toFixed(4)}°, {currentMapLng.toFixed(4)}°
-                    </span>
-                    <button
-                      onClick={() => handleNavigate(currentMapLat, currentMapLng)}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-[10px] uppercase tracking-wider"
-                    >
-                      Open Maps
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Resource Capacity Card */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-red-500" />
-                  <span>Regional Capacity Monitor</span>
-                </h3>
-
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <div className="flex justify-between font-semibold text-slate-300 mb-1">
-                      <span>Central Hospital ICU Beds</span>
-                      <span className="font-mono text-emerald-400">18 / 25 Available</span>
+                {activeSOSForMap ? (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-2">
+                      <div className="flex justify-between items-center text-xs font-mono">
+                        <span className="text-slate-400">Target Victim:</span>
+                        <span className="font-black text-white">{activeSOSForMap.citizenName}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs font-mono">
+                        <span className="text-slate-400">Coordinates:</span>
+                        <span className="font-bold text-red-400">
+                          {activeSOSForMap.latitude.toFixed(4)}° N, {activeSOSForMap.longitude.toFixed(4)}° E
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs font-mono">
+                        <span className="text-slate-400">Est. Vector Distance:</span>
+                        <span className="font-bold text-emerald-400">
+                          {getDistanceMiles(activeSOSForMap.latitude, activeSOSForMap.longitude)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-800 rounded-full h-2">
-                      <div className="bg-emerald-500 h-2 rounded-full w-[72%]" />
+
+                    <div className="p-4 bg-red-950/40 border border-red-800/60 rounded-2xl space-y-2 text-xs text-red-300">
+                      <p className="font-bold flex items-center gap-1.5">
+                        <Radio className="w-4 h-4 text-red-400 animate-ping" />
+                        <span>Continuous High-Frequency GPS Tracking Stream</span>
+                      </p>
+                      <p className="text-[11px] text-red-400/80 leading-relaxed font-mono">
+                        Victim device telemetric coordinates update automatically (&lt;20ms latency).
+                      </p>
                     </div>
                   </div>
-
-                  <div>
-                    <div className="flex justify-between font-semibold text-slate-300 mb-1">
-                      <span>NDRF Evacuation Boats</span>
-                      <span className="font-mono text-amber-400">4 / 10 Deployed</span>
-                    </div>
-                    <div className="w-full bg-slate-800 rounded-full h-2">
-                      <div className="bg-amber-500 h-2 rounded-full w-[40%]" />
-                    </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-500 text-xs font-mono">
+                    Select an incident from the queue to lock tactical map vector.
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
-
-      {/* Mobile Fixed Bottom Touch Navigation Bar */}
-      <BottomMobileNav />
     </div>
   );
 };
