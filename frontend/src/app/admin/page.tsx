@@ -15,8 +15,6 @@ import {
   Phone,
   ShieldCheck,
   Ambulance,
-  Building,
-  HeartHandshake,
   Activity,
   Trash2,
   AlertTriangle,
@@ -91,9 +89,10 @@ export default function AdminDashboardPage() {
       setOrganization("");
       setBadgeNumber("");
       setPassword("");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Account provisioning error:", err);
-      setErrorMsg(err?.message || "Failed to provision user account. Make sure password is at least 6 chars.");
+      const msg = err instanceof Error ? err.message : "Failed to provision user account. Make sure password is at least 6 chars.";
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -353,7 +352,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <p className="text-xs text-slate-400">
-                  Change any user's role on the fly. When they log in via <strong className="text-white">/login</strong>, they immediately receive that role's dashboard privileges.
+                  Change any user&apos;s role on the fly. When they log in via <strong className="text-white">/login</strong>, they immediately receive that role&apos;s dashboard privileges.
                 </p>
 
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
