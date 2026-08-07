@@ -12,9 +12,6 @@ import {
   MapPin,
   Compass,
   AlertTriangle,
-  Send,
-  Shield,
-  Activity,
 } from "lucide-react";
 import {
   subscribeLiveSOSQueue,
@@ -24,7 +21,7 @@ import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
 
 export const RescueDashboardLayout: React.FC = () => {
-  const { userProfile, logout } = useAuth();
+  const { logout } = useAuth();
   const [requests, setRequests] = useState<SOSFirestoreRequest[]>([]);
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
   const [lastSyncedTime, setLastSyncedTime] = useState<string>("");
@@ -32,8 +29,6 @@ export const RescueDashboardLayout: React.FC = () => {
 
   // Selected squad assignment per request ID
   const [squadAssignments, setSquadAssignments] = useState<Record<string, string>>({});
-  // Resolution log note per request ID
-  const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
 
   // Rescue Base Coordinates (India Command Grid)
   const baseLat = 12.9716;

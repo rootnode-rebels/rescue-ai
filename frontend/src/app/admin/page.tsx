@@ -17,8 +17,6 @@ import {
   KeyRound,
   FileText,
   Megaphone,
-  CheckCircle2,
-  AlertTriangle,
 } from "lucide-react";
 import { UserRole, UserProfile, SOSFirestoreRequest } from "@/types/auth";
 import {
@@ -33,7 +31,6 @@ import {
   subscribeIntelligentAuditLogs,
   AuditLogEntry,
   dispatchEmergencyBroadcastInFirestore,
-  EmergencyBroadcastMessage,
 } from "@/services/authService";
 
 export default function AdminDashboardPage() {
@@ -517,7 +514,7 @@ function SuperAdminContent() {
                   <label className="block text-xs font-bold text-slate-400 mb-1.5">Category</label>
                   <select
                     value={bCategory}
-                    onChange={(e) => setBCategory(e.target.value as any)}
+                    onChange={(e) => setBCategory(e.target.value as "FLOOD" | "CYCLONE" | "HEATWAVE" | "EARTHQUAKE" | "EVACUATION_ORDER" | "GENERAL")}
                     className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-red-500"
                   >
                     <option value="FLOOD">Flash Flood</option>
@@ -533,7 +530,7 @@ function SuperAdminContent() {
                   <label className="block text-xs font-bold text-slate-400 mb-1.5">Severity Level</label>
                   <select
                     value={bSeverity}
-                    onChange={(e) => setBSeverity(e.target.value as any)}
+                    onChange={(e) => setBSeverity(e.target.value as "CRITICAL" | "WARNING" | "ADVISORY")}
                     className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-red-500"
                   >
                     <option value="CRITICAL">CRITICAL (Red Alert)</option>
