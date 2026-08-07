@@ -29,10 +29,11 @@ const LOCAL_STORAGE_KEY = "rescueai_user_profile";
  * Super Admin Authorized Bootstrap Emails
  */
 export const SUPER_ADMIN_EMAILS = [
+  "adhiam@outlook.in",
+  "akashakashr505@gmail.com",
   "adhibasavanal@gmail.com",
   "akshathch567@gmail.com",
   "akash191112@gmail.com",
-  "akashakashr505@gmail.com",
 ];
 
 export function isSuperAdminEmail(email?: string | null): boolean {
