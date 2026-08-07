@@ -321,7 +321,7 @@ export const RescueDashboardLayout: React.FC = () => {
                           </button>
                         )}
 
-                        {(status === "Resolved" || status === "Completed" || status === "RESOLVED" || status === "COMPLETED") && (
+                        {(status === "Resolved" || status === "Completed" || status === "COMPLETED") && (
                           <div className="w-full py-3 bg-emerald-950/80 border border-emerald-800 text-emerald-400 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 uppercase tracking-wider">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                             <span>Rescue Operation Resolved &amp; Completed</span>
