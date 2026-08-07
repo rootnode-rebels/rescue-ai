@@ -2,10 +2,11 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Bot, Send, Sparkles, User } from "lucide-react";
+import { Bot, Send, Sparkles, User, Loader2 } from "lucide-react";
 
 export const AIQuickCard: React.FC = () => {
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Array<{ sender: "user" | "ai"; text: string }>>([
     {
       sender: "ai",
@@ -19,26 +20,43 @@ export const AIQuickCard: React.FC = () => {
     "Request Emergency Medical Aid?",
   ];
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const query = textToSend || input;
     if (!query.trim()) return;
 
-    // Add User Message
     const updated = [...messages, { sender: "user" as const, text: query }];
     setMessages(updated);
     setInput("");
+    setLoading(true);
 
-    // Simulate AI Response
-    setTimeout(() => {
+    try {
+      const res = await fetch("https://rescueai-backend-3u2o.onrender.com/api/v1/triage/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: query }),
+      });
+      const data = await res.json();
+      let reply = "";
+      if (data.triage_result && data.triage_result.action_plan) {
+        reply = `🚨 [Priority: ${data.triage_result.priority_level}] ${data.triage_result.summary} Guidance: ${data.triage_result.action_plan}`;
+      } else if (data.advice) {
+        reply = data.advice;
+      } else {
+        reply = "Safety Protocol: Seek higher ground immediately during floods. Use the red SOS button for emergency dispatch.";
+      }
+      setMessages((prev) => [...prev, { sender: "ai" as const, text: reply }]);
+    } catch (err) {
+      console.warn("FastAPI Render AI Assistant notice:", err);
       let reply = "Stay safe! Nearby Evacuation Shelters are active at Central High School (0.8 mi) and City Arena (1.4 mi).";
       if (query.toLowerCase().includes("flood")) {
         reply = "Flood Safety Protocol: Move immediately to higher ground. Do NOT walk or drive through moving water. Keep your mobile charged.";
       } else if (query.toLowerCase().includes("medical") || query.toLowerCase().includes("aid")) {
         reply = "Medical Emergency: Tap the Red SOS button above to broadcast your GPS to Coast Guard & Medical Dispatch Node #902.";
       }
-
       setMessages((prev) => [...prev, { sender: "ai" as const, text: reply }]);
-    }, 600);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -92,6 +110,12 @@ export const AIQuickCard: React.FC = () => {
             </div>
           </div>
         ))}
+        {loading && (
+          <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold p-2">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Gemini AI is analyzing safety response...</span>
+          </div>
+        )}
       </div>
 
       {/* Quick Questions Pills */}
@@ -99,8 +123,9 @@ export const AIQuickCard: React.FC = () => {
         {quickQuestions.map((q) => (
           <button
             key={q}
+            disabled={loading}
             onClick={() => handleSend(q)}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] rounded-xl transition-colors"
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] rounded-xl transition-colors disabled:opacity-50"
           >
             {q}
           </button>
@@ -120,14 +145,16 @@ export const AIQuickCard: React.FC = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask for safety advice, evacuation routes..."
-          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-medium transition-all"
+          disabled={loading}
+          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-medium transition-all disabled:opacity-50"
         />
         <button
           type="submit"
-          className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-md transition-all shrink-0"
+          disabled={loading || !input.trim()}
+          className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-md transition-all shrink-0 disabled:opacity-50"
           aria-label="Send query"
         >
-          <Send className="w-4 h-4" />
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </form>
     </motion.div>

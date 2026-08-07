@@ -17,7 +17,7 @@ import {
   updateSOSLocationInFirestore,
   subscribeUserActiveSOS,
 } from "@/services/sosService";
-import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
+import { SOSFirestoreRequest } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { CheckCircle2, ShieldAlert, Sparkles, X, MapPin, Radio, Clock } from "lucide-react";
 
