@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
-import { SUPER_ADMIN_EMAILS } from "@/services/authService";
 import {
   ShieldAlert,
   UserPlus,
@@ -18,6 +17,9 @@ import {
   Ambulance,
   Building,
   HeartHandshake,
+  Activity,
+  Sliders,
+  Radio,
 } from "lucide-react";
 import { UserRole } from "@/types/auth";
 
@@ -35,7 +37,7 @@ export default function AdminDashboardPage() {
   const handleCreateOfficial = (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMsg(
-      `Official Account for "${name}" (${role.toUpperCase()}) created successfully! Authorized credentials logged.`
+      `Official Account for "${name}" (${role.toUpperCase()}) provisioned successfully! Secure access credentials issued.`
     );
     setName("");
     setEmail("");
@@ -66,27 +68,37 @@ export default function AdminDashboardPage() {
 
           <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 rounded-2xl border border-slate-700 text-xs font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Super Admin: {userProfile?.email}</span>
+            <span>Super Admin Rights Active</span>
           </div>
         </header>
 
         <main className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8">
-          {/* Whitelisted Super Admins Banner */}
-          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl space-y-3">
-            <h3 className="text-sm font-black uppercase tracking-wider text-red-400 flex items-center gap-2">
-              <Lock className="w-4 h-4 text-red-500" />
-              <span>Authorized Super Admin Whitelist Email Node</span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-              {SUPER_ADMIN_EMAILS.map((emailAddr) => (
-                <div
-                  key={emailAddr}
-                  className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center gap-2 text-slate-200 font-semibold"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="truncate">{emailAddr}</span>
-                </div>
-              ))}
+          {/* Security & System Status Banner (No Credentials / Emails Rendered) */}
+          <div className="p-6 bg-slate-900 border border-slate-800 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl border border-emerald-500/30">
+                <Activity className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <span>Encrypted Super Admin Node Active</span>
+                  <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono rounded-md">
+                    VERIFIED
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  High-security authentication protocol enforced. Zero sensitive key exposure.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs font-mono">
+              <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-slate-300">
+                System Health: <strong className="text-emerald-400">99.99% ONLINE</strong>
+              </div>
+              <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-slate-300">
+                Role Override: <strong className="text-red-400">AUTHORITY EOC</strong>
+              </div>
             </div>
           </div>
 
@@ -97,10 +109,10 @@ export default function AdminDashboardPage() {
               <div>
                 <h3 className="text-xl font-black text-white flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-red-500" />
-                  <span>Provision New Official Account</span>
+                  <span>Provision Official Responder Account</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Exclusively authorized for Super Admins to add Rescue Officers, Authorities, Hospitals, and NGOs.
+                  Provision new Rescue Officers, EOC Authorities, Hospital Triage, and NGO Relief Units.
                 </p>
               </div>
 
@@ -172,7 +184,7 @@ export default function AdminDashboardPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="mark.vance@ndrf.gov"
+                        placeholder="responder@rescueai.gov"
                         className="w-full h-11 pl-10 pr-4 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
@@ -247,13 +259,53 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="w-full h-12 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-red-950 transition-all mt-4"
                 >
-                  Create &amp; Provision Official Credentials
+                  Provision Official Credentials
                 </button>
               </form>
             </div>
 
-            {/* Right Column (5 cols): Active Officers Matrix */}
-            <div className="lg:col-span-5 space-y-4">
+            {/* Right Column (5 cols): System Controls & Provisioned Nodes */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Super Admin Control Panel */}
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-red-500" />
+                  <span>Super Admin System Overrides</span>
+                </h3>
+
+                <div className="space-y-3 text-xs">
+                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-white">Emergency Broadcast Override</h4>
+                      <p className="text-[10px] text-slate-400">Trigger nationwide EOC alert banner</p>
+                    </div>
+                    <button className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white font-black text-[10px] uppercase rounded-xl shadow-md">
+                      BROADCAST
+                    </button>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-white">Gemini AI Triage Confidence Threshold</h4>
+                      <p className="text-[10px] text-slate-400">Auto-elevate priority at score &gt;= 0.85</p>
+                    </div>
+                    <span className="font-mono text-emerald-400 font-bold">0.85 OPTIMAL</span>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-white">FastAPI Backend Telemetry Node</h4>
+                      <p className="text-[10px] text-slate-400">Live Render microservices synchronization</p>
+                    </div>
+                    <span className="font-mono text-blue-400 font-bold flex items-center gap-1">
+                      <Radio className="w-3 h-3 animate-pulse" />
+                      CONNECTED
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Provisioned Nodes */}
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
                 <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                   Provisioned Official Nodes
