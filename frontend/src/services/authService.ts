@@ -21,6 +21,21 @@ const USERS_COLLECTION = "users";
 const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
+ * Super Admin Authorized Whitelist Emails
+ */
+export const SUPER_ADMIN_EMAILS = [
+  "adhibasavanal@gmail.com",
+  "akshathch567@gmail.com",
+  "akash191112@gmail.com",
+  "akashakashr505@gmail.com",
+];
+
+export function isSuperAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return SUPER_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+/**
  * Saves user profile to localStorage for persistent sessions across page reloads & app restarts.
  */
 function saveProfileToLocalStorage(profile: UserProfile): void {
@@ -56,6 +71,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
     if (userSnapshot.exists()) {
       const profile = userSnapshot.data() as UserProfile;
+      if (isSuperAdminEmail(profile.email)) {
+        profile.role = "authority";
+      }
       saveProfileToLocalStorage(profile);
       return profile;
     }
@@ -68,7 +86,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored) as UserProfile;
+        const profile = JSON.parse(stored) as UserProfile;
+        if (isSuperAdminEmail(profile.email)) {
+          profile.role = "authority";
+        }
+        return profile;
       } catch (e) {
         console.warn("Error parsing stored user profile:", e);
       }
@@ -79,6 +101,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 /**
  * Registers a new user with Email & Password.
+ * Public self-registration is strictly for Citizens, unless email is in Super Admin Whitelist.
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -87,15 +110,18 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
   await updateProfile(user, { displayName: data.name });
 
+  const isSuperAdmin = isSuperAdminEmail(data.email);
+  const assignedRole: UserRole = isSuperAdmin ? "authority" : "citizen";
+
   const now = new Date().toISOString();
   const newProfile: UserProfile = {
     uid: user.uid,
     name: data.name,
     email: data.email,
     phone: data.phone || "",
-    role: data.role || "citizen",
-    organization: data.organization || "",
-    badgeNumber: data.badgeNumber || "",
+    role: assignedRole,
+    organization: isSuperAdmin ? "EOC National Super Admin Command" : data.organization || "",
+    badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : data.badgeNumber || "",
     photoURL: user.photoURL || null,
     createdAt: now,
     lastLogin: now,
@@ -122,10 +148,17 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   const now = new Date().toISOString();
 
   let profile = await getUserProfile(user.uid);
+  const isSuperAdmin = isSuperAdminEmail(data.email);
 
   if (profile) {
+    if (isSuperAdmin) {
+      profile.role = "authority";
+    }
     try {
-      await updateDoc(doc(db, USERS_COLLECTION, user.uid), { lastLogin: now });
+      await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
+        lastLogin: now,
+        role: profile.role,
+      });
     } catch (err) {
       console.warn("Firestore update error:", err);
     }
@@ -136,7 +169,9 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       name: user.displayName || "User",
       email: user.email || data.email,
       phone: user.phoneNumber || "",
-      role: "citizen",
+      role: isSuperAdmin ? "authority" : "citizen",
+      organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
+      badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
       photoURL: user.photoURL || null,
       createdAt: now,
       lastLogin: now,
@@ -156,13 +191,15 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 /**
  * Signs in or registers user via Google Authentication with browserLocalPersistence.
  */
-export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserProfile> {
+export async function loginWithGoogle(requestedRole: UserRole = "citizen"): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
   const userCredential = await signInWithPopup(auth, googleProvider);
   const user = userCredential.user;
   const now = new Date().toISOString();
 
   let profile = await getUserProfile(user.uid);
+  const isSuperAdmin = isSuperAdminEmail(user.email);
+  const assignedRole: UserRole = isSuperAdmin ? "authority" : requestedRole;
 
   if (!profile) {
     profile = {
@@ -170,7 +207,9 @@ export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserP
       name: user.displayName || "Google User",
       email: user.email || "",
       phone: user.phoneNumber || "",
-      role: role,
+      role: assignedRole,
+      organization: isSuperAdmin ? "EOC National Super Admin Command" : "",
+      badgeNumber: isSuperAdmin ? "SUPER-ADMIN-01" : "",
       photoURL: user.photoURL || null,
       createdAt: now,
       lastLogin: now,
@@ -182,8 +221,14 @@ export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserP
       console.warn("Firestore setDoc error:", err);
     }
   } else {
+    if (isSuperAdmin) {
+      profile.role = "authority";
+    }
     try {
-      await updateDoc(doc(db, USERS_COLLECTION, user.uid), { lastLogin: now });
+      await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
+        lastLogin: now,
+        role: profile.role,
+      });
     } catch (err) {
       console.warn("Firestore update error:", err);
     }
