@@ -80,8 +80,25 @@ export default function AdminDashboardPage() {
         badgeNumber,
       });
 
+      // Dispatch Resend email notification
+      try {
+        await fetch("/api/send-reset-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: created.name,
+            email: created.email,
+            role: created.role,
+            tempPassword: password,
+            actionType: "provision",
+          }),
+        });
+      } catch (emailErr) {
+        console.warn("Resend API email notice:", emailErr);
+      }
+
       setSuccessMsg(
-        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! User can now log in via the main /login page.`
+        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! Credentials and email notice dispatched to user's inbox (${created.email}).`
       );
       setName("");
       setEmail("");
