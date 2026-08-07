@@ -6,29 +6,14 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   ShieldAlert,
   UserPlus,
-  Building2,
-  CheckCircle2,
-  Mail,
   User,
-  Lock,
-  Phone,
-  ShieldCheck,
-  Ambulance,
-  Activity,
   Trash2,
-  AlertTriangle,
   Users,
   Search,
-  Clock,
   LogOut,
-  UserX,
-  Filter,
   Radio,
-  RadioTower,
   Server,
-  Zap,
   Flame,
-  MapPin,
   KeyRound,
   FileText,
 } from "lucide-react";
@@ -36,7 +21,6 @@ import { UserRole, UserProfile, SOSFirestoreRequest } from "@/types/auth";
 import {
   subscribeLiveSOSQueue,
   deleteSOSRequestInFirestore,
-  updateSOSStatusInFirestore,
 } from "@/services/sosService";
 import {
   provisionUserAccountBySuperAdmin,
@@ -45,9 +29,7 @@ import {
   deleteUserInFirestore,
   subscribeIntelligentAuditLogs,
   AuditLogEntry,
-  logoutUser,
 } from "@/services/authService";
-import { useRouter } from "next/navigation";
 
 export default function AdminDashboardPage() {
   return (
@@ -59,7 +41,6 @@ export default function AdminDashboardPage() {
 
 function SuperAdminContent() {
   const { userProfile, logout } = useAuth();
-  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"users" | "emergencies" | "audit" | "health">("users");
 
@@ -124,7 +105,6 @@ function SuperAdminContent() {
         badgeNumber,
       });
 
-      // Dispatch Resend email notification
       try {
         await fetch("/api/send-reset-email", {
           method: "POST",
@@ -142,7 +122,7 @@ function SuperAdminContent() {
       }
 
       setSuccessMsg(
-        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! Unique Temp Password: "${tempPassword}". Resend email notification dispatched.`
+        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! Temp Password: "${tempPassword}".`
       );
       setName("");
       setEmail("");
@@ -241,12 +221,13 @@ function SuperAdminContent() {
             { id: "health", label: "Service Health & Controls", icon: Server },
           ].map((tab) => {
             const IconComp = tab.icon;
+            const tabId = tab.id as "users" | "emergencies" | "audit" | "health";
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tabId)}
                 className={`px-4 py-2.5 rounded-2xl text-xs font-extrabold flex items-center gap-2 whitespace-nowrap transition-all ${
-                  activeTab === tab.id
+                  activeTab === tabId
                     ? "bg-red-600 text-white shadow-lg shadow-red-950"
                     : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white"
                 }`}
@@ -258,11 +239,21 @@ function SuperAdminContent() {
           })}
         </div>
 
-        {/* Global Success / Error Banners */}
+        {/* Global Success Banners */}
         {successMsg && (
           <div className="p-4 bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-md">
             <span>{successMsg}</span>
             <button onClick={() => setSuccessMsg("")} className="text-emerald-400 hover:text-white font-bold ml-2">
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Global Error Banners */}
+        {errorMsg && (
+          <div className="p-4 bg-red-950/60 border border-red-800/60 text-red-300 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-md">
+            <span>{errorMsg}</span>
+            <button onClick={() => setErrorMsg("")} className="text-red-400 hover:text-white font-bold ml-2">
               Dismiss
             </button>
           </div>

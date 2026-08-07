@@ -2,19 +2,30 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building, Users, MapPin, CheckCircle2, ShieldCheck, ArrowRight, X, Phone, HeartPulse } from "lucide-react";
+import { Building, MapPin, CheckCircle2, ArrowRight, X } from "lucide-react";
 import { bookShelterSpotInFirestore, ShelterBookingRecord } from "@/services/authService";
 import { useAuth } from "@/hooks/useAuth";
 
+interface ShelterItem {
+  id: string;
+  name: string;
+  address: string;
+  distance: string;
+  capacity: number;
+  occupied: number;
+  phone: string;
+  facilities: string[];
+}
+
 export const ShelterCard: React.FC = () => {
   const { userProfile } = useAuth();
-  const [selectedShelter, setSelectedShelter] = useState<any | null>(null);
+  const [selectedShelter, setSelectedShelter] = useState<ShelterItem | null>(null);
   const [evacueeCount, setEvacueeCount] = useState<number>(1);
   const [specialAssistance, setSpecialAssistance] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [activeBooking, setActiveBooking] = useState<ShelterBookingRecord | null>(null);
 
-  const shelters = [
+  const shelters: ShelterItem[] = [
     {
       id: "shelter-01",
       name: "Central Evacuation Relief Shelter",
