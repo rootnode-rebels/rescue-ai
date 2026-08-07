@@ -1,35 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isGlobalAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email in [
-          'adhiam@outlook.in',
-          'akashakashr505@gmail.com',
-          'adhibasavanal@gmail.com'
-        ]
-      );
-    }
-
-    function isRescueAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email in [
-          'akshathch567@gmail.com',
-          'akash191112@gmail.com'
-        ]
-      );
-    }
 
     // Users Collection Rule
     match /users/{userId} {
-      allow read: if true;
-      allow create, update, write: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow read, create, update, write, delete: if true;
     }
 
     // Real-Time SOS Requests Collection Rule
