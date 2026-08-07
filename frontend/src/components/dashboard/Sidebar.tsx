@@ -8,15 +8,13 @@ import {
   LayoutDashboard,
   Flame,
   Bot,
-  MapPin,
+  Building,
   FileText,
   BookOpen,
   Bell,
   User,
   Settings,
   LogOut,
-  Phone,
-  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -29,7 +27,8 @@ export type DashboardViewMode =
   | "guide"
   | "alerts"
   | "profile"
-  | "settings";
+  | "settings"
+  | "rescue-dashboard";
 
 interface SidebarProps {
   activeView?: DashboardViewMode;
@@ -38,124 +37,143 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSelectView }) => {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { userProfile, logout } = useAuth();
 
-  const navItems: { name: string; viewKey: DashboardViewMode; href: string; icon: React.ElementType }[] = [
-    { name: "Dashboard", viewKey: "dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "SOS & Help", viewKey: "sos", href: "/dashboard/sos", icon: Flame },
-    { name: "AI Assistant", viewKey: "ai-assistant", href: "/dashboard/ai-assistant", icon: Bot },
-    { name: "Nearby Shelters", viewKey: "shelters", href: "/dashboard#shelters", icon: MapPin },
-    { name: "My Requests", viewKey: "my-requests", href: "/dashboard#my-requests", icon: FileText },
-    { name: "Emergency Guide", viewKey: "guide", href: "/dashboard#guide", icon: BookOpen },
-    { name: "Live Alerts", viewKey: "alerts", href: "/dashboard#alerts", icon: Bell },
-    { name: "Profile", viewKey: "profile", href: "/dashboard#profile", icon: User },
-    { name: "Settings", viewKey: "settings", href: "/dashboard#settings", icon: Settings },
+  const isRescueUser = userProfile?.role === "rescue_admin" || userProfile?.role === "rescue";
+  const isAdminUser = userProfile?.role === "global_admin";
+
+  const navigationItems = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      href: isRescueUser ? "/rescue-dashboard" : isAdminUser ? "/admin" : "/dashboard",
+    },
+    {
+      id: "sos",
+      label: "Emergency SOS",
+      icon: Flame,
+      href: "/sos",
+      badge: "LIVE",
+    },
+    {
+      id: "ai-assistant",
+      label: "AI Assistant",
+      icon: Bot,
+      href: "/ai-assistant",
+    },
+    {
+      id: "my-requests",
+      label: "My Requests",
+      icon: FileText,
+      href: "/dashboard#my-requests",
+    },
+    {
+      id: "shelters",
+      label: "Shelters",
+      icon: Building,
+      href: "/dashboard#shelters",
+    },
+    {
+      id: "alerts",
+      label: "Live Alerts",
+      icon: Bell,
+      href: "/dashboard#alerts",
+    },
+    {
+      id: "guide",
+      label: "Emergency Guide",
+      icon: BookOpen,
+      href: "/dashboard#guide",
+    },
+    {
+      id: "profile",
+      label: "Profile",
+      icon: User,
+      href: "/dashboard#profile",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      href: "/dashboard#settings",
+    },
   ];
 
-  const handleItemClick = (item: (typeof navItems)[0], e: React.MouseEvent) => {
-    if (onSelectView) {
-      if (item.viewKey === "sos" || item.viewKey === "ai-assistant") {
-        // Allow Next Router for dedicated pages
-        return;
-      }
-      e.preventDefault();
-      onSelectView(item.viewKey);
-    }
-  };
-
   return (
-    <aside className="w-72 bg-[#08101D] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between shrink-0 min-h-screen p-6 font-sans">
-      {/* Top Section: Brand & Nav Items */}
-      <div className="space-y-8">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative flex items-center justify-center w-11 h-11 bg-red-600 rounded-2xl text-white shadow-xl shadow-red-600/40 group-hover:scale-105 transition-transform duration-300">
-            <ShieldAlert className="w-6 h-6" />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tight text-white flex items-center gap-1">
-              Rescue<span className="text-red-500">AI</span>
-            </span>
-            <span className="text-[9px] font-extrabold tracking-[0.2em] uppercase text-slate-400">
-              Citizen Portal
-            </span>
-          </div>
-        </Link>
-
-        {/* Navigation List */}
-        <nav className="space-y-1.5">
-          {navItems.map((item) => {
-            const IconComp = item.icon;
-            const isSelected = activeView === item.viewKey || pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={(e) => handleItemClick(item, e)}
-                className={`flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-2xl transition-all duration-200 ${
-                  isSelected
-                    ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                }`}
-              >
-                <IconComp className={`w-4 h-4 ${isSelected ? "text-white" : "text-slate-400"}`} />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
+    <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col h-screen sticky top-0 shrink-0 z-30 font-sans">
+      {/* Brand Header */}
+      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+        <div className="w-10 h-10 bg-red-600 rounded-xl text-white flex items-center justify-center font-bold shadow-lg shadow-red-900/50 shrink-0">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="font-black text-white text-base tracking-tight leading-none">
+            Rescue<span className="text-red-500">AI</span>
+          </h1>
+          <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-wider">
+            {userProfile?.role === "global_admin"
+              ? "Super Admin EOC"
+              : userProfile?.role === "rescue_admin"
+              ? "NDRF Command"
+              : "Citizen Portal"}
+          </p>
+        </div>
       </div>
 
-      {/* Bottom Section: Emergency Helplines & Status Cards */}
-      <div className="space-y-4 pt-6 border-t border-slate-800/80">
-        {/* Bottom Card 1: Emergency Helpline Widget */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2.5">
-          <div className="flex items-center gap-2 text-xs font-extrabold text-white uppercase tracking-wider">
-            <Phone className="w-4 h-4 text-red-500 animate-pulse" />
-            <span>Emergency Helplines</span>
+      {/* Navigation List */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 no-scrollbar">
+        {navigationItems.map((item) => {
+          const Icon = item.icon;
+          const isActive =
+            pathname === item.href || (activeView && activeView === item.id);
+
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={() => onSelectView && onSelectView(item.id as DashboardViewMode)}
+              className={`flex items-center justify-between px-3.5 py-3 rounded-2xl font-bold text-xs transition-all duration-200 group ${
+                isActive
+                  ? "bg-red-600 text-white shadow-lg shadow-red-950/50"
+                  : "text-slate-400 hover:bg-slate-800/80 hover:text-white"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Icon
+                  className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                    isActive ? "text-white" : "text-slate-400 group-hover:text-white"
+                  }`}
+                />
+                <span>{item.label}</span>
+              </div>
+              {item.badge && (
+                <span className="px-2 py-0.5 text-[9px] font-black bg-red-500/20 text-red-400 border border-red-500/30 rounded-full animate-pulse">
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* User Footer Profile & Logout */}
+      <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-xs flex items-center justify-center shrink-0">
+            {userProfile?.name?.charAt(0) || "U"}
           </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300">
-            <div className="p-2 bg-slate-950/80 rounded-xl border border-slate-800 flex justify-between">
-              <span className="text-slate-400">EOC:</span>
-              <strong className="text-red-400 font-bold">112</strong>
-            </div>
-            <div className="p-2 bg-slate-950/80 rounded-xl border border-slate-800 flex justify-between">
-              <span className="text-slate-400">Police:</span>
-              <strong className="text-blue-400 font-bold">100</strong>
-            </div>
-            <div className="p-2 bg-slate-950/80 rounded-xl border border-slate-800 flex justify-between">
-              <span className="text-slate-400">Fire:</span>
-              <strong className="text-amber-400 font-bold">101</strong>
-            </div>
-            <div className="p-2 bg-slate-950/80 rounded-xl border border-slate-800 flex justify-between">
-              <span className="text-slate-400">Medical:</span>
-              <strong className="text-emerald-400 font-bold">102</strong>
-            </div>
+          <div className="truncate">
+            <p className="text-xs font-bold text-white truncate">{userProfile?.name || "Citizen"}</p>
+            <p className="text-[10px] text-slate-400 truncate">{userProfile?.email}</p>
           </div>
         </div>
-
-        {/* Bottom Card 2: Green Safety Status Card */}
-        <div className="bg-emerald-950/50 border border-emerald-800/60 rounded-2xl p-3.5 flex items-center gap-3">
-          <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-extrabold text-emerald-400">You are Safe</h4>
-            <p className="text-[10px] text-slate-400 font-sans">No active local hazards reported.</p>
-          </div>
-        </div>
-
-        {/* Logout Button */}
         <button
           onClick={() => logout()}
-          className="w-full py-3 px-4 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-800 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+          className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-all"
+          title="Sign Out"
         >
           <LogOut className="w-4 h-4" />
-          <span>Logout Portal</span>
         </button>
       </div>
     </aside>
