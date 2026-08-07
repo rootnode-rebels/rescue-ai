@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Volume2, VolumeX, ShieldAlert, AlertTriangle, Info, Radio } from "lucide-react";
+import { Bell, Volume2, VolumeX, AlertTriangle, Radio } from "lucide-react";
+import { subscribeEmergencyBroadcasts, EmergencyBroadcastMessage } from "@/services/authService";
 
 export const AlertCard: React.FC = () => {
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [filterSeverity, setFilterSeverity] = useState<string>("ALL");
+  const [liveBroadcasts, setLiveBroadcasts] = useState<EmergencyBroadcastMessage[]>([]);
 
-  const alerts = [
+  // Default fallback broadcast alerts
+  const defaultAlerts: EmergencyBroadcastMessage[] = [
     {
       id: "ALT-901",
       title: "Flash Flood & High Surge Warning",
@@ -17,8 +20,9 @@ export const AlertCard: React.FC = () => {
       affectedZone: "Coastal Sector 4 & Lowland Basins",
       radius: "5.2 Miles Radius",
       instruction: "Move immediately to higher ground. Evacuation Shelters #1 & #3 are actively taking in residents.",
-      timestamp: "12 mins ago",
-      badgeStyle: "bg-red-100 text-red-700 border-red-200",
+      dispatchedByEmail: "eoc@rescueai.gov.in",
+      dispatchedByName: "National Disaster Command",
+      timestamp: new Date().toISOString(),
     },
     {
       id: "ALT-884",
@@ -28,23 +32,28 @@ export const AlertCard: React.FC = () => {
       affectedZone: "Inland Metropolitan Grid",
       radius: "12 Miles Radius",
       instruction: "Stay hydrated. Community Cooling Nodes are open at City Center Arena.",
-      timestamp: "1 hour ago",
-      badgeStyle: "bg-amber-100 text-amber-700 border-amber-200",
-    },
-    {
-      id: "ALT-810",
-      title: "Coastal Cyclone Advisory Notice",
-      category: "CYCLONE",
-      severity: "ADVISORY",
-      affectedZone: "Eastern Maritime Belt",
-      radius: "25 Miles Radius",
-      instruction: "Secure loose outdoor equipment. Marine vessels should return to harbor immediately.",
-      timestamp: "3 hours ago",
-      badgeStyle: "bg-blue-100 text-blue-700 border-blue-200",
+      dispatchedByEmail: "met@rescueai.gov.in",
+      dispatchedByName: "Meteorological Bureau",
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
     },
   ];
 
-  const filteredAlerts = alerts.filter((alt) => filterSeverity === "ALL" || alt.severity === filterSeverity);
+  // Subscribe to real-time Super Admin Broadcasts stream
+  useEffect(() => {
+    const unsub = subscribeEmergencyBroadcasts((messages) => {
+      if (messages && messages.length > 0) {
+        setLiveBroadcasts(messages);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  const displayAlerts = liveBroadcasts.length > 0 ? liveBroadcasts : defaultAlerts;
+
+  const filteredAlerts = displayAlerts.filter(
+    (alt) => filterSeverity === "ALL" || alt.severity === filterSeverity
+  );
 
   return (
     <motion.div
@@ -101,29 +110,40 @@ export const AlertCard: React.FC = () => {
 
       {/* Alerts Feed */}
       <div className="space-y-3">
-        {filteredAlerts.map((alt) => (
-          <div
-            key={alt.id}
-            className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 hover:bg-white hover:shadow-md transition-all duration-200"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                <h4 className="text-xs font-black text-slate-900">{alt.title}</h4>
+        {filteredAlerts.map((alt) => {
+          const badgeClass =
+            alt.severity === "CRITICAL"
+              ? "bg-red-100 text-red-700 border-red-200"
+              : alt.severity === "WARNING"
+              ? "bg-amber-100 text-amber-700 border-amber-200"
+              : "bg-blue-100 text-blue-700 border-blue-200";
+
+          return (
+            <div
+              key={alt.id}
+              className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 hover:bg-white hover:shadow-md transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                  <h4 className="text-xs font-black text-slate-900">{alt.title}</h4>
+                </div>
+                <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${badgeClass}`}>
+                  {alt.severity}
+                </span>
               </div>
-              <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${alt.badgeStyle}`}>
-                {alt.severity}
-              </span>
-            </div>
 
-            <p className="text-xs text-slate-700 font-medium">{alt.instruction}</p>
+              <p className="text-xs text-slate-700 font-medium">{alt.instruction}</p>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
-              <span>Zone: <strong className="text-slate-900 font-bold">{alt.affectedZone}</strong></span>
-              <span>{alt.timestamp}</span>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
+                <span>
+                  Zone: <strong className="text-slate-900 font-bold">{alt.affectedZone}</strong> ({alt.radius})
+                </span>
+                <span>{new Date(alt.timestamp).toLocaleTimeString()}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </motion.div>
   );

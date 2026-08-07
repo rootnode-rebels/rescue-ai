@@ -16,6 +16,9 @@ import {
   Flame,
   KeyRound,
   FileText,
+  Megaphone,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { UserRole, UserProfile, SOSFirestoreRequest } from "@/types/auth";
 import {
@@ -29,6 +32,8 @@ import {
   deleteUserInFirestore,
   subscribeIntelligentAuditLogs,
   AuditLogEntry,
+  dispatchEmergencyBroadcastInFirestore,
+  EmergencyBroadcastMessage,
 } from "@/services/authService";
 
 export default function AdminDashboardPage() {
@@ -42,7 +47,7 @@ export default function AdminDashboardPage() {
 function SuperAdminContent() {
   const { userProfile, logout } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"users" | "emergencies" | "audit" | "health">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "broadcasts" | "emergencies" | "audit" | "health">("users");
 
   // Account Provisioning State
   const [role, setRole] = useState<UserRole>("rescue_admin");
@@ -55,6 +60,15 @@ function SuperAdminContent() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Broadcast Dispatch State
+  const [bTitle, setBTitle] = useState("");
+  const [bCategory, setBCategory] = useState<"FLOOD" | "CYCLONE" | "HEATWAVE" | "EARTHQUAKE" | "EVACUATION_ORDER" | "GENERAL">("FLOOD");
+  const [bSeverity, setBSeverity] = useState<"CRITICAL" | "WARNING" | "ADVISORY">("CRITICAL");
+  const [bZone, setBZone] = useState("");
+  const [bRadius, setBRadius] = useState("");
+  const [bInstruction, setBInstruction] = useState("");
+  const [bLoading, setBLoading] = useState(false);
 
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [allSOS, setAllSOS] = useState<SOSFirestoreRequest[]>([]);
@@ -139,6 +153,33 @@ function SuperAdminContent() {
     }
   };
 
+  const handleDispatchBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBLoading(true);
+    try {
+      const broadcast = await dispatchEmergencyBroadcastInFirestore({
+        title: bTitle,
+        category: bCategory,
+        severity: bSeverity,
+        affectedZone: bZone || "All National Quadrants",
+        radius: bRadius || "10 Miles Radius",
+        instruction: bInstruction,
+        dispatchedByEmail: userProfile?.email || "superadmin@rescueai.org",
+        dispatchedByName: userProfile?.name || "Super Admin Command",
+      });
+
+      setSuccessMsg(`National Emergency Broadcast "${broadcast.title}" Dispatched Live to All Citizens!`);
+      setBTitle("");
+      setBZone("");
+      setBRadius("");
+      setBInstruction("");
+    } catch (err) {
+      console.error("Error dispatching broadcast:", err);
+    } finally {
+      setBLoading(false);
+    }
+  };
+
   const handleRoleChange = async (uid: string, newRole: UserRole) => {
     try {
       await updateUserRoleInFirestore(uid, newRole);
@@ -189,7 +230,7 @@ function SuperAdminContent() {
                 </span>
               </h1>
               <p className="text-xs text-slate-400 font-medium">
-                National Governance • Real-Time User &amp; SOS Telemetry Console
+                National Governance • Real-Time User, SOS Telemetry &amp; Emergency Broadcast Console
               </p>
             </div>
           </div>
@@ -216,12 +257,13 @@ function SuperAdminContent() {
         <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
           {[
             { id: "users", label: "User Directory & Provisioning", icon: Users },
+            { id: "broadcasts", label: "Dispatch Emergency Broadcasts", icon: Megaphone },
             { id: "emergencies", label: "Global Emergency Stream", icon: Radio },
             { id: "audit", label: "Intelligent Audit Logs", icon: FileText },
             { id: "health", label: "Service Health & Controls", icon: Server },
           ].map((tab) => {
             const IconComp = tab.icon;
-            const tabId = tab.id as "users" | "emergencies" | "audit" | "health";
+            const tabId = tab.id as "users" | "broadcasts" | "emergencies" | "audit" | "health";
             return (
               <button
                 key={tab.id}
@@ -444,7 +486,111 @@ function SuperAdminContent() {
           </div>
         )}
 
-        {/* Tab 2: Global Emergency Stream */}
+        {/* Tab 2: Dispatch Emergency Broadcasts (Super Admin Exclusive) */}
+        {activeTab === "broadcasts" && (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <Megaphone className="w-5 h-5 text-red-500 animate-pulse" />
+                <h2 className="text-base font-black text-white">National Emergency Broadcast Dispatch Console</h2>
+              </div>
+              <span className="text-[10px] font-mono text-red-400 bg-red-950 px-3 py-1 rounded-full border border-red-800/60 font-bold">
+                SUPER ADMIN EXCLUSIVE
+              </span>
+            </div>
+
+            <form onSubmit={handleDispatchBroadcast} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Broadcast Title</label>
+                <input
+                  type="text"
+                  value={bTitle}
+                  onChange={(e) => setBTitle(e.target.value)}
+                  required
+                  placeholder="e.g. Mandatory Evacuation Directive - Coastal Sector 4"
+                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Category</label>
+                  <select
+                    value={bCategory}
+                    onChange={(e) => setBCategory(e.target.value as any)}
+                    className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-red-500"
+                  >
+                    <option value="FLOOD">Flash Flood</option>
+                    <option value="EVACUATION_ORDER">Evacuation Order</option>
+                    <option value="CYCLONE">Cyclone Surge</option>
+                    <option value="HEATWAVE">Heatwave Advisory</option>
+                    <option value="EARTHQUAKE">Seismic Warning</option>
+                    <option value="GENERAL">General Notice</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5">Severity Level</label>
+                  <select
+                    value={bSeverity}
+                    onChange={(e) => setBSeverity(e.target.value as any)}
+                    className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-bold focus:outline-none focus:border-red-500"
+                  >
+                    <option value="CRITICAL">CRITICAL (Red Alert)</option>
+                    <option value="WARNING">WARNING (Amber Alert)</option>
+                    <option value="ADVISORY">ADVISORY (Blue Notice)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Target Affected Zone</label>
+                <input
+                  type="text"
+                  value={bZone}
+                  onChange={(e) => setBZone(e.target.value)}
+                  placeholder="e.g. Coastal Sector 4 & Lowland Basins"
+                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Affected Radius / Grid Coverage</label>
+                <input
+                  type="text"
+                  value={bRadius}
+                  onChange={(e) => setBRadius(e.target.value)}
+                  placeholder="e.g. 10.5 Miles Radius"
+                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Safety &amp; Evacuation Directives</label>
+                <textarea
+                  value={bInstruction}
+                  onChange={(e) => setBInstruction(e.target.value)}
+                  required
+                  placeholder="e.g. Move immediately to Relief Shelter #1 or high ground. Evacuation shuttles deployed."
+                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 resize-none h-24"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <button
+                  type="submit"
+                  disabled={bLoading}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-2xl shadow-xl shadow-red-950 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                >
+                  <Megaphone className="w-4 h-4" />
+                  <span>{bLoading ? "Dispatching Broadcast..." : "DISPATCH NATIONAL EMERGENCY BROADCAST LIVE"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Tab 3: Global Emergency Stream */}
         {activeTab === "emergencies" && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -486,7 +632,7 @@ function SuperAdminContent() {
           </div>
         )}
 
-        {/* Tab 3: Intelligent Audit Logs */}
+        {/* Tab 4: Intelligent Audit Logs */}
         {activeTab === "audit" && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
@@ -539,7 +685,7 @@ function SuperAdminContent() {
           </div>
         )}
 
-        {/* Tab 4: Service Health & Controls */}
+        {/* Tab 5: Service Health & Controls */}
         {activeTab === "health" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">

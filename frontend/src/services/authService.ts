@@ -27,6 +27,7 @@ import { RegisterFormData, LoginFormData, UserProfile, UserRole } from "@/types/
 const USERS_COLLECTION = "users";
 const AUDIT_LOGS_COLLECTION = "audit_logs";
 const SHELTER_BOOKINGS_COLLECTION = "shelter_bookings";
+const BROADCASTS_COLLECTION = "emergency_broadcasts";
 const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 
 /**
@@ -129,6 +130,87 @@ export interface ShelterBookingRecord {
   specialAssistance: boolean;
   status: "CONFIRMED" | "CHECKED_IN" | "CANCELLED";
   bookedAt: string;
+}
+
+/**
+ * Interface for Emergency Broadcast Messages dispatched by Super Admin.
+ */
+export interface EmergencyBroadcastMessage {
+  id: string;
+  title: string;
+  category: "FLOOD" | "CYCLONE" | "HEATWAVE" | "EARTHQUAKE" | "EVACUATION_ORDER" | "GENERAL";
+  severity: "CRITICAL" | "WARNING" | "ADVISORY";
+  affectedZone: string;
+  radius: string;
+  instruction: string;
+  dispatchedByEmail: string;
+  dispatchedByName: string;
+  timestamp: string;
+}
+
+/**
+ * Dispatches a National Emergency Broadcast Message from Super Admin to all clients in real time.
+ */
+export async function dispatchEmergencyBroadcastInFirestore(
+  broadcast: Partial<EmergencyBroadcastMessage>
+): Promise<EmergencyBroadcastMessage> {
+  const id = broadcast.id || "ALT-" + Math.floor(100 + Math.random() * 900);
+  const now = new Date().toISOString();
+
+  const record: EmergencyBroadcastMessage = {
+    id,
+    title: broadcast.title || "National Emergency Directive",
+    category: broadcast.category || "GENERAL",
+    severity: broadcast.severity || "CRITICAL",
+    affectedZone: broadcast.affectedZone || "All Regions",
+    radius: broadcast.radius || "10 Miles Radius",
+    instruction: broadcast.instruction || "Follow emergency safety protocols.",
+    dispatchedByEmail: broadcast.dispatchedByEmail || "superadmin@rescueai.org",
+    dispatchedByName: broadcast.dispatchedByName || "Super Admin Command",
+    timestamp: now,
+  };
+
+  try {
+    await setDoc(doc(db, BROADCASTS_COLLECTION, id), record);
+    await logUserActivityInFirestore({
+      actorEmail: record.dispatchedByEmail,
+      actorName: record.dispatchedByName,
+      actionCategory: "CRITICAL_DISPATCH",
+      description: `Dispatched National Broadcast Alert: "${record.title}" [${record.severity}]`,
+      riskScore: "HIGH_PRIORITY",
+    });
+  } catch (err) {
+    console.warn("Broadcast dispatch error:", err);
+  }
+
+  return record;
+}
+
+/**
+ * Subscribes to real-time Emergency Broadcast Messages from Cloud Firestore.
+ */
+export function subscribeEmergencyBroadcasts(
+  callback: (messages: EmergencyBroadcastMessage[]) => void
+): () => void {
+  try {
+    const ref = collection(db, BROADCASTS_COLLECTION);
+    return onSnapshot(
+      ref,
+      (snapshot) => {
+        const list: EmergencyBroadcastMessage[] = [];
+        snapshot.forEach((docSnap) => {
+          if (docSnap.exists()) {
+            list.push(docSnap.data() as EmergencyBroadcastMessage);
+          }
+        });
+        list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        callback(list);
+      },
+      (err) => console.warn("Broadcasts stream error:", err)
+    );
+  } catch (e) {
+    return () => {};
+  }
 }
 
 /**
