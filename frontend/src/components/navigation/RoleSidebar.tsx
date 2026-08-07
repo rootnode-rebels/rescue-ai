@@ -20,18 +20,28 @@ const MENU_ITEMS: Record<UserRole, MenuItem[]> = {
     { title: "Nearby Shelters", href: "/dashboard#shelters", icon: "🗺️" },
     { title: "My Requests", href: "/dashboard#requests", icon: "📋" },
   ],
+  rescue_admin: [
+    { title: "Dispatch Command Board", href: "/rescue-dashboard", icon: "🚨" },
+    { title: "Live SOS Triage Queue", href: "/rescue-dashboard", icon: "🆘" },
+    { title: "GIS Incident Map", href: "/rescue-dashboard#map", icon: "📍" },
+    { title: "Resource Monitor", href: "/rescue-dashboard#resources", icon: "📦" },
+  ],
+  global_admin: [
+    { title: "Super Admin Command Console", href: "/admin", icon: "👑" },
+    { title: "Provision Rescue Admins", href: "/admin", icon: "🛡️" },
+    { title: "Realtime Firestore SOS Purge", href: "/admin", icon: "🔥" },
+    { title: "Shelter & Telemetry Matrix", href: "/admin", icon: "📊" },
+  ],
   rescue: [
     { title: "Dispatch Command", href: "/rescue-dashboard", icon: "🚨" },
     { title: "Live SOS Queue", href: "/dashboard/sos", icon: "🆘" },
     { title: "Heatmap & Map", href: "/rescue-dashboard#map", icon: "📍" },
     { title: "Resource Status", href: "/rescue-dashboard#resources", icon: "📦" },
-    { title: "AI Triage Insights", href: "/dashboard/ai-assistant", icon: "🤖" },
   ],
   authority: [
     { title: "Crisis Control Center", href: "/rescue-dashboard", icon: "🏛️" },
     { title: "SOS Incident Monitor", href: "/dashboard/sos", icon: "🆘" },
     { title: "Priority Analytics", href: "/rescue-dashboard#analytics", icon: "📊" },
-    { title: "AI Assistant", href: "/dashboard/ai-assistant", icon: "🤖" },
   ],
   hospital: [
     { title: "Medical Triage Board", href: "/rescue-dashboard", icon: "🏥" },
@@ -47,6 +57,8 @@ const MENU_ITEMS: Record<UserRole, MenuItem[]> = {
 
 const ROLE_BADGE_STYLES: Record<UserRole, string> = {
   citizen: "bg-emerald-950 text-emerald-300 border-emerald-800",
+  rescue_admin: "bg-amber-950 text-amber-300 border-amber-800",
+  global_admin: "bg-red-950 text-red-300 border-red-800",
   rescue: "bg-amber-950 text-amber-300 border-amber-800",
   authority: "bg-red-950 text-red-300 border-red-800",
   hospital: "bg-blue-950 text-blue-300 border-blue-800",
@@ -108,7 +120,9 @@ export const RoleSidebar: React.FC = () => {
 
             {/* Role Badge */}
             <span
-              className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${ROLE_BADGE_STYLES[role]}`}
+              className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
+                ROLE_BADGE_STYLES[role] || ROLE_BADGE_STYLES["citizen"]
+              }`}
             >
               {role}
             </span>
