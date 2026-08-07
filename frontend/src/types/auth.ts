@@ -12,6 +12,7 @@ export interface UserProfile {
   createdAt: string;
   lastLogin: string;
   status: "active" | "suspended" | "pending" | "pending_approval";
+  mustChangePassword?: boolean;
 }
 
 export type SOSStatus =

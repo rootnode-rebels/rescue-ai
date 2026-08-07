@@ -83,11 +83,11 @@ export default function AdminDashboardPage() {
     setErrorMsg("");
 
     try {
-      const created = await provisionUserAccountBySuperAdmin({
+      const { profile: created, tempPassword } = await provisionUserAccountBySuperAdmin({
         name,
         email,
         phone,
-        password,
+        password: password || undefined,
         role,
         organization,
         badgeNumber,
@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
             name: created.name,
             email: created.email,
             role: created.role,
-            tempPassword: password,
+            tempPassword: tempPassword,
             actionType: "provision",
           }),
         });
@@ -111,7 +111,7 @@ export default function AdminDashboardPage() {
       }
 
       setSuccessMsg(
-        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! Credentials and email notice dispatched to user's inbox (${created.email}).`
+        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! Unique Temp Password: "${tempPassword}". User must update password upon 1st sign in.`
       );
       setName("");
       setEmail("");
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
       setPassword("");
     } catch (err: unknown) {
       console.error("Account provisioning error:", err);
-      const msg = err instanceof Error ? err.message : "Failed to provision user account. Make sure password is at least 6 chars.";
+      const msg = err instanceof Error ? err.message : "Failed to provision user account.";
       setErrorMsg(msg);
     } finally {
       setLoading(false);

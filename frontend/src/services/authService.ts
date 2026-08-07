@@ -5,6 +5,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  updatePassword,
   setPersistence,
   browserLocalPersistence,
   getAuth,
@@ -43,6 +44,18 @@ export function isSuperAdminEmail(email?: string | null): boolean {
 }
 
 /**
+ * Generates a unique, cryptographically random temporary password.
+ */
+export function generateUniqueTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Rescue#${code}`;
+}
+
+/**
  * Saves user profile to localStorage for persistent client session cache.
  */
 function saveProfileToLocalStorage(profile: UserProfile): void {
@@ -70,7 +83,6 @@ function clearProfileFromLocalStorage(): void {
 
 /**
  * Fetches user profile strictly from Firestore `users/{uid}` document.
- * ONLY uses localStorage fallback if stored profile UID matches requested UID.
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
@@ -105,7 +117,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 /**
  * Registers a new Citizen account.
- * Public users ALWAYS get role = "citizen".
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -129,6 +140,7 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
     createdAt: now,
     lastLogin: now,
     status: "active",
+    mustChangePassword: false,
   };
 
   try {
@@ -143,7 +155,6 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
 
 /**
  * Signs in user with Email & Password.
- * Auto-provisions Whitelisted Super Admin emails if signing in for the first time!
  */
 export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -205,6 +216,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       createdAt: now,
       lastLogin: now,
       status: "active",
+      mustChangePassword: false,
     };
 
     try {
@@ -258,6 +270,7 @@ export async function loginWithGoogle(): Promise<UserProfile> {
       createdAt: now,
       lastLogin: now,
       status: "active",
+      mustChangePassword: false,
     };
     try {
       await setDoc(doc(db, USERS_COLLECTION, user.uid), profile);
@@ -271,24 +284,25 @@ export async function loginWithGoogle(): Promise<UserProfile> {
 }
 
 /**
- * Provisions a new user account (Citizen, Rescue Admin, Global Admin) by Super Admin.
- * Uses a secondary Firebase App instance so Super Admin stays signed in.
+ * Provisions a new user account with a UNIQUE temporary password.
+ * Flags account with mustChangePassword = true so user is forced to change password upon 1st login.
  */
 export async function provisionUserAccountBySuperAdmin(data: {
   name: string;
   email: string;
   phone: string;
-  password: string;
+  password?: string;
   role: UserRole;
   organization?: string;
   badgeNumber?: string;
-}): Promise<UserProfile> {
+}): Promise<{ profile: UserProfile; tempPassword: string }> {
+  const tempPassword = data.password || generateUniqueTempPassword();
   const tempAppName = "SecondaryAdminApp_" + Date.now();
   const secondaryApp = initializeApp(firebaseConfig, tempAppName);
   const secondaryAuth = getAuth(secondaryApp);
   const secondaryDb = getFirestore(secondaryApp);
 
-  const credential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, data.email, tempPassword);
   const user = credential.user;
 
   const now = new Date().toISOString();
@@ -304,6 +318,7 @@ export async function provisionUserAccountBySuperAdmin(data: {
     createdAt: now,
     lastLogin: now,
     status: "active",
+    mustChangePassword: true, // Force Password Change on First Login
   };
 
   try {
@@ -319,7 +334,31 @@ export async function provisionUserAccountBySuperAdmin(data: {
   }
 
   await signOut(secondaryAuth);
-  return newProfile;
+  return { profile: newProfile, tempPassword };
+}
+
+/**
+ * Completes mandatory first login password update.
+ */
+export async function completeFirstLoginPasswordChange(newPassword: string): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("No active authenticated user found.");
+  }
+
+  // 1. Update Firebase Auth Password
+  await updatePassword(currentUser, newPassword);
+
+  // 2. Update Cloud Firestore profile document
+  const userDocRef = doc(db, USERS_COLLECTION, currentUser.uid);
+  await updateDoc(userDocRef, { mustChangePassword: false });
+
+  // 3. Update local session storage
+  const profile = await getUserProfile(currentUser.uid);
+  if (profile) {
+    profile.mustChangePassword = false;
+    saveProfileToLocalStorage(profile);
+  }
 }
 
 /**
@@ -337,7 +376,6 @@ export function subscribeAllUsers(callback: (users: UserProfile[]) => void): () 
             list.push(docSnap.data() as UserProfile);
           }
         });
-        // Sort by lastLogin or createdAt descending
         list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         callback(list);
       },

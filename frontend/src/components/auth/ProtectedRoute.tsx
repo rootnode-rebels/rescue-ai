@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRole } from "@/types/auth";
+import { ForcePasswordChangeModal } from "./ForcePasswordChangeModal";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -72,5 +73,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <ForcePasswordChangeModal />
+      {children}
+    </>
+  );
 };
