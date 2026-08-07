@@ -6,6 +6,7 @@ import { TopNavbar } from "../dashboard/TopNavbar";
 import { IncidentCard } from "../ui/IncidentCard";
 import { StatsCard } from "../ui/StatsCard";
 import { MapCard } from "../common/MapCard";
+import { BottomMobileNav } from "../dashboard/BottomMobileNav";
 import {
   ShieldAlert,
   Ambulance,
@@ -360,6 +361,9 @@ export const RescueDashboardLayout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Mobile Fixed Bottom Touch Navigation Bar (320px-1024px) */}
+      <BottomMobileNav />
     </div>
   );
 };

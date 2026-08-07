@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Sidebar, DashboardViewMode } from "./Sidebar";
+import { BottomMobileNav } from "./BottomMobileNav";
 import { TopNavbar } from "./TopNavbar";
 import { StatsCard } from "./StatsCard";
 import { SOSCard } from "./SOSCard";
@@ -14,7 +15,6 @@ import { FooterCTA } from "./FooterCTA";
 import { useAuth } from "@/hooks/useAuth";
 import {
   X,
-  ShieldCheck,
   Building,
   Bell,
   BookOpen,
@@ -22,9 +22,7 @@ import {
   Settings,
   Flame,
   CheckCircle2,
-  Phone,
   AlertTriangle,
-  Heart,
   Droplet,
 } from "lucide-react";
 
@@ -43,8 +41,8 @@ export const DashboardLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-red-500 selection:text-white">
-      {/* Left Sidebar */}
+    <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-x-hidden selection:bg-red-500 selection:text-white pb-16 lg:pb-0">
+      {/* Left Permanent Sidebar for Desktop (1025px+) */}
       <div className="hidden lg:block">
         <Sidebar activeView={activeView} onSelectView={handleSelectView} />
       </div>
@@ -55,9 +53,9 @@ export const DashboardLayout: React.FC = () => {
         <TopNavbar />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-6 sm:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl w-full mx-auto">
           {/* View Filter Pill Bar */}
-          <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-slate-200">
+          <div className="flex items-center gap-2 pb-3 overflow-x-auto no-scrollbar border-b border-slate-200">
             {[
               { id: "dashboard", label: "Dashboard Overview" },
               { id: "my-requests", label: "My Requests" },
@@ -70,7 +68,7 @@ export const DashboardLayout: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => handleSelectView(tab.id as DashboardViewMode)}
-                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
+                className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
                   activeView === tab.id
                     ? "bg-red-600 text-white shadow-md shadow-red-950"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
@@ -88,9 +86,9 @@ export const DashboardLayout: React.FC = () => {
           <SOSCard />
 
           {/* 2-Column Grid: Left Main Grid & Right Information Panel */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
             {/* Left Column (8 cols): Map & AI Chat & Requests */}
-            <div className="lg:col-span-8 space-y-8">
+            <div className="lg:col-span-8 space-y-6 sm:space-y-8">
               <MapCard />
               <AIQuickCard />
               <div id="my-requests">
@@ -99,7 +97,7 @@ export const DashboardLayout: React.FC = () => {
             </div>
 
             {/* Right Information Panel (4 cols): Alerts & Shelters */}
-            <div className="lg:col-span-4 space-y-8">
+            <div className="lg:col-span-4 space-y-6 sm:space-y-8">
               <div id="alerts">
                 <AlertCard />
               </div>
@@ -114,12 +112,15 @@ export const DashboardLayout: React.FC = () => {
         </main>
       </div>
 
-      {/* Interactive Modals for Sidebar Action Buttons */}
+      {/* Mobile Fixed Bottom Touch Navigation Bar (320px-1024px) */}
+      <BottomMobileNav activeView={activeView} onSelectView={handleSelectView} />
+
+      {/* Interactive Modals for Action Buttons */}
 
       {/* 1. MY REQUESTS MODAL */}
       {activeModal === "my-requests" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800"
@@ -139,16 +140,16 @@ export const DashboardLayout: React.FC = () => {
 
             <div className="space-y-3 font-mono text-xs">
               <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-1">
                   <span className="font-extrabold text-red-400">SOS-9081 (FLOOD TRAP)</span>
-                  <span className="px-2.5 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-bold">
+                  <span className="px-2.5 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-bold self-start sm:self-auto">
                     CRITICAL PRIORITY
                   </span>
                 </div>
                 <p className="text-slate-300 font-sans">
                   Description: Rising flood water trapped 4 family members on roof.
                 </p>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-900 text-slate-400 font-sans">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center pt-2 border-t border-slate-900 text-slate-400 font-sans gap-1">
                   <span>Assigned: Coast Guard Unit #4</span>
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -171,7 +172,7 @@ export const DashboardLayout: React.FC = () => {
       {/* 2. NEARBY SHELTERS MODAL */}
       {activeModal === "shelters" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800"
@@ -191,7 +192,7 @@ export const DashboardLayout: React.FC = () => {
 
             <div className="space-y-3 text-xs">
               <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                <div className="flex justify-between font-bold text-slate-200">
+                <div className="flex flex-col sm:flex-row justify-between font-bold text-slate-200 gap-1">
                   <span>Central High School Shelter</span>
                   <span className="text-emerald-400">180 / 250 Beds Available</span>
                 </div>
@@ -199,7 +200,7 @@ export const DashboardLayout: React.FC = () => {
               </div>
 
               <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                <div className="flex justify-between font-bold text-slate-200">
+                <div className="flex flex-col sm:flex-row justify-between font-bold text-slate-200 gap-1">
                   <span>Community Arena Dome</span>
                   <span className="text-amber-400">45 / 400 Beds Available</span>
                 </div>
@@ -220,7 +221,7 @@ export const DashboardLayout: React.FC = () => {
       {/* 3. LIVE ALERTS MODAL */}
       {activeModal === "alerts" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800"
@@ -276,7 +277,7 @@ export const DashboardLayout: React.FC = () => {
       {/* 4. EMERGENCY GUIDE MODAL */}
       {activeModal === "guide" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full text-white space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800"
@@ -326,7 +327,7 @@ export const DashboardLayout: React.FC = () => {
       {/* 5. PROFILE MODAL */}
       {activeModal === "profile" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-white space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-white space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800"
@@ -378,7 +379,7 @@ export const DashboardLayout: React.FC = () => {
       {/* 6. SETTINGS MODAL */}
       {activeModal === "settings" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-white space-y-6 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-white space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800"
