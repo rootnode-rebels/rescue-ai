@@ -68,7 +68,11 @@ export const LiveGPSMap: React.FC<LiveGPSMapProps> = ({
         height="100%"
         frameBorder="0"
         scrolling="no"
-        src={`https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=15&output=embed`}
+        src={
+          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+            ? `https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${location.latitude},${location.longitude}&zoom=15`
+            : `https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=15&output=embed`
+        }
         className="w-full h-full grayscale-[25%] contrast-[1.1] opacity-90 group-hover:opacity-100 transition-opacity"
       />
 

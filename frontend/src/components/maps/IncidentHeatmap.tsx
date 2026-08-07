@@ -34,7 +34,11 @@ export const IncidentHeatmap: React.FC = () => {
         height="100%"
         frameBorder="0"
         scrolling="no"
-        src="https://maps.google.com/maps?q=37.7749,-122.4194&z=13&output=embed"
+        src={
+          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+            ? `https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=37.7749,-122.4194&zoom=13`
+            : `https://maps.google.com/maps?q=37.7749,-122.4194&z=13&output=embed`
+        }
         className="w-full h-full grayscale contrast-[1.2] opacity-80"
       />
 
