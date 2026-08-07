@@ -15,6 +15,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   getFirestore,
 } from "firebase/firestore";
@@ -152,7 +153,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
   } catch (err: unknown) {
     const fbErr = err as { code?: string };
-    // Auto-create Whitelisted Super Admin account in Firebase Auth if not created yet!
     if (
       isSuperAdminEmail(data.email) &&
       (fbErr.code === "auth/user-not-found" || fbErr.code === "auth/invalid-credential")
@@ -173,7 +173,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   let profile = await getUserProfile(user.uid);
 
   if (profile) {
-    // Enforce global_admin role for Whitelisted Super Admins
     if (isSuperAdminEmail(data.email) && profile.role !== "global_admin") {
       profile.role = "global_admin";
       try {
@@ -338,6 +337,8 @@ export function subscribeAllUsers(callback: (users: UserProfile[]) => void): () 
             list.push(docSnap.data() as UserProfile);
           }
         });
+        // Sort by lastLogin or createdAt descending
+        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         callback(list);
       },
       (error) => {
@@ -359,6 +360,18 @@ export async function updateUserRoleInFirestore(uid: string, newRole: UserRole):
     await updateDoc(docRef, { role: newRole, status: "active" });
   } catch (err) {
     console.warn("Error updating user role in Firestore:", err);
+  }
+}
+
+/**
+ * Deletes a user document from Cloud Firestore.
+ */
+export async function deleteUserInFirestore(uid: string): Promise<void> {
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn("Error deleting user from Firestore:", err);
   }
 }
 
