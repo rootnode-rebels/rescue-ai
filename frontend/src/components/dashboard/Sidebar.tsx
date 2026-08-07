@@ -20,21 +20,48 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-export const Sidebar: React.FC = () => {
+export type DashboardViewMode =
+  | "dashboard"
+  | "sos"
+  | "ai-assistant"
+  | "shelters"
+  | "my-requests"
+  | "guide"
+  | "alerts"
+  | "profile"
+  | "settings";
+
+interface SidebarProps {
+  activeView?: DashboardViewMode;
+  onSelectView?: (view: DashboardViewMode) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSelectView }) => {
   const pathname = usePathname();
   const { logout } = useAuth();
 
-  const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "SOS & Help", href: "/dashboard/sos", icon: Flame },
-    { name: "AI Assistant", href: "/dashboard/ai-assistant", icon: Bot },
-    { name: "Nearby Shelters", href: "#shelters", icon: MapPin },
-    { name: "My Requests", href: "#my-requests", icon: FileText },
-    { name: "Emergency Guide", href: "#guide", icon: BookOpen },
-    { name: "Live Alerts", href: "#alerts", icon: Bell },
-    { name: "Profile", href: "#profile", icon: User },
-    { name: "Settings", href: "#settings", icon: Settings },
+  const navItems: { name: string; viewKey: DashboardViewMode; href: string; icon: React.ElementType }[] = [
+    { name: "Dashboard", viewKey: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "SOS & Help", viewKey: "sos", href: "/dashboard/sos", icon: Flame },
+    { name: "AI Assistant", viewKey: "ai-assistant", href: "/dashboard/ai-assistant", icon: Bot },
+    { name: "Nearby Shelters", viewKey: "shelters", href: "/dashboard#shelters", icon: MapPin },
+    { name: "My Requests", viewKey: "my-requests", href: "/dashboard#my-requests", icon: FileText },
+    { name: "Emergency Guide", viewKey: "guide", href: "/dashboard#guide", icon: BookOpen },
+    { name: "Live Alerts", viewKey: "alerts", href: "/dashboard#alerts", icon: Bell },
+    { name: "Profile", viewKey: "profile", href: "/dashboard#profile", icon: User },
+    { name: "Settings", viewKey: "settings", href: "/dashboard#settings", icon: Settings },
   ];
+
+  const handleItemClick = (item: (typeof navItems)[0], e: React.MouseEvent) => {
+    if (onSelectView) {
+      if (item.viewKey === "sos" || item.viewKey === "ai-assistant") {
+        // Allow Next Router for dedicated pages
+        return;
+      }
+      e.preventDefault();
+      onSelectView(item.viewKey);
+    }
+  };
 
   return (
     <aside className="w-72 bg-[#08101D] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between shrink-0 min-h-screen p-6 font-sans">
@@ -63,18 +90,19 @@ export const Sidebar: React.FC = () => {
         <nav className="space-y-1.5">
           {navItems.map((item) => {
             const IconComp = item.icon;
-            const isActive = pathname === item.href;
+            const isSelected = activeView === item.viewKey || pathname === item.href;
             return (
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={(e) => handleItemClick(item, e)}
                 className={`flex items-center gap-3 px-4 py-3 text-xs font-bold rounded-2xl transition-all duration-200 ${
-                  isActive
+                  isSelected
                     ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
                     : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                 }`}
               >
-                <IconComp className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
+                <IconComp className={`w-4 h-4 ${isSelected ? "text-white" : "text-slate-400"}`} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -117,7 +145,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div>
             <h4 className="text-xs font-extrabold text-emerald-400">You are Safe</h4>
-            <p className="text-[10px] text-slate-400">No active local hazards reported.</p>
+            <p className="text-[10px] text-slate-400 font-sans">No active local hazards reported.</p>
           </div>
         </div>
 
