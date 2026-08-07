@@ -13,6 +13,13 @@ const SOS_COLLECTION_1 = "sos_requests";
 const SOS_COLLECTION_2 = "sos";
 
 /**
+ * Returns a direct clickable Google Maps URL for given latitude & longitude.
+ */
+export function getGoogleMapsUrl(latitude: number, longitude: number): string {
+  return `https://www.google.com/maps?q=${latitude},${longitude}`;
+}
+
+/**
  * Normalizes raw Firestore document data into a strict SOSFirestoreRequest object.
  */
 function normalizeSOSDocument(docId: string, rawData: Record<string, unknown>): SOSFirestoreRequest {

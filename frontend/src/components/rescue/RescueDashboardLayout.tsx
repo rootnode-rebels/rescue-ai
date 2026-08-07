@@ -14,10 +14,12 @@ import {
   AlertTriangle,
   ArrowRight,
   Check,
+  ExternalLink,
 } from "lucide-react";
 import {
   subscribeLiveSOSQueue,
   updateSOSStatusInFirestore,
+  getGoogleMapsUrl,
 } from "@/services/sosService";
 import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
@@ -109,10 +111,15 @@ export const RescueDashboardLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-300 font-mono">
+            <a
+              href={getGoogleMapsUrl(baseLat, baseLng)}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-red-400 font-mono hover:text-white transition-colors"
+            >
               <Compass className="w-4 h-4 text-blue-400" />
-              <span>Base Grid: 12.97° N, 77.59° E</span>
-            </div>
+              <span>Base Grid: 12.97° N, 77.59° E (Open Maps)</span>
+            </a>
             <button
               onClick={() => logout()}
               className="px-3.5 py-2 bg-red-950/60 hover:bg-red-900 text-red-400 border border-red-800/60 rounded-xl text-xs font-extrabold transition-all"
@@ -239,10 +246,19 @@ export const RescueDashboardLayout: React.FC = () => {
                       </p>
 
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono pt-1 text-slate-400">
-                        <span className="flex items-center gap-1.5 text-red-400">
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span>{req.latitude.toFixed(4)}° N, {req.longitude.toFixed(4)}° E ({dist})</span>
-                        </span>
+                        {/* DIRECT CLICKABLE GOOGLE MAPS LINK */}
+                        <a
+                          href={getGoogleMapsUrl(req.latitude, req.longitude)}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 text-red-400 hover:text-white font-bold underline"
+                          title="Open exact GPS coordinates on Google Maps"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-red-500" />
+                          <span>Google Maps: {req.latitude.toFixed(4)}° N, {req.longitude.toFixed(4)}° E ({dist})</span>
+                          <ExternalLink className="w-3 h-3 text-red-400" />
+                        </a>
                         <span>People: <strong className="text-white">{req.peopleCount || 1}</strong> • Medical: <strong className="text-amber-400">{req.medicalNeeds ? "YES" : "NO"}</strong></span>
                       </div>
 
@@ -355,10 +371,16 @@ export const RescueDashboardLayout: React.FC = () => {
                         <span className="font-black text-white">{activeSOSForMap.citizenName}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs font-mono">
-                        <span className="text-slate-400">Coordinates:</span>
-                        <span className="font-bold text-red-400">
-                          {activeSOSForMap.latitude.toFixed(4)}° N, {activeSOSForMap.longitude.toFixed(4)}° E
-                        </span>
+                        <span className="text-slate-400">Google Maps Link:</span>
+                        <a
+                          href={getGoogleMapsUrl(activeSOSForMap.latitude, activeSOSForMap.longitude)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-red-400 underline hover:text-white flex items-center gap-1"
+                        >
+                          <span>Open Google Maps</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       </div>
                       <div className="flex justify-between items-center text-xs font-mono">
                         <span className="text-slate-400">Est. Vector Distance:</span>

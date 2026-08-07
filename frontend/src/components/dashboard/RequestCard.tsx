@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Flame, MapPin, Radio, Ambulance } from "lucide-react";
-import { subscribeLiveSOSQueue } from "@/services/sosService";
+import { Flame, MapPin, Radio, Ambulance, ExternalLink } from "lucide-react";
+import { subscribeLiveSOSQueue, getGoogleMapsUrl } from "@/services/sosService";
 import { SOSFirestoreRequest } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -32,9 +32,13 @@ export const RequestCard: React.FC = () => {
     switch (status) {
       case "Accepted":
         return "bg-emerald-100 text-emerald-800 border-emerald-300";
+      case "Team On The Way":
       case "In Progress":
         return "bg-amber-100 text-amber-800 border-amber-300 animate-pulse";
+      case "Reached":
+        return "bg-indigo-100 text-indigo-800 border-indigo-300";
       case "Resolved":
+      case "Completed":
         return "bg-blue-100 text-blue-800 border-blue-300";
       default:
         return "bg-red-100 text-red-800 border-red-300";
@@ -94,10 +98,19 @@ export const RequestCard: React.FC = () => {
                   <Ambulance className="w-3.5 h-3.5 text-slate-500" />
                   <span>Team: <strong className="text-slate-900 font-bold">{req.assignedTeamName || "Dispatching..."}</strong></span>
                 </span>
-                <span className="flex items-center gap-1 text-slate-500">
-                  <MapPin className="w-3.5 h-3.5 text-red-500" />
-                  <span>{req.latitude.toFixed(2)}, {req.longitude.toFixed(2)}</span>
-                </span>
+                
+                {/* DIRECT CLICKABLE GOOGLE MAPS LOCATION LINK */}
+                <a
+                  href={getGoogleMapsUrl(req.latitude, req.longitude)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-red-600 hover:text-red-700 font-bold underline"
+                  title="Open exact GPS coordinates on Google Maps"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-red-600" />
+                  <span>Google Maps</span>
+                  <ExternalLink className="w-3 h-3 text-red-500" />
+                </a>
               </div>
             </div>
           ))
