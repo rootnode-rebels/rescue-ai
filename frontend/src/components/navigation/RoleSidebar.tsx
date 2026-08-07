@@ -13,33 +13,44 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: Record<UserRole, MenuItem[]> = {
-  Citizen: [
+  citizen: [
     { title: "Citizen Overview", href: "/dashboard", icon: "🏠" },
-    { title: "Emergency SOS Page", href: "/dashboard/sos", icon: "🆘" },
-    { title: "Safety & Evacuation", href: "/dashboard#evacuation", icon: "🗺️" },
-    { title: "Status Updates", href: "/dashboard#updates", icon: "📢" },
-    { title: "My Profile", href: "/dashboard#profile", icon: "👤" },
+    { title: "Emergency SOS", href: "/dashboard/sos", icon: "🆘" },
+    { title: "AI Assistant", href: "/dashboard/ai-assistant", icon: "🤖" },
+    { title: "Nearby Shelters", href: "/dashboard#shelters", icon: "🗺️" },
+    { title: "My Requests", href: "/dashboard#requests", icon: "📋" },
   ],
-  "Rescue Team": [
-    { title: "Rescue Operational Board", href: "/rescue-dashboard", icon: "🚨" },
-    { title: "Emergency SOS Monitor", href: "/dashboard/sos", icon: "🆘" },
-    { title: "Dispatch & Location Map", href: "/rescue-dashboard#dispatch", icon: "📍" },
-    { title: "Resource Requests", href: "/rescue-dashboard#resources", icon: "📦" },
-    { title: "Team Field Logs", href: "/rescue-dashboard#logs", icon: "📋" },
+  rescue: [
+    { title: "Dispatch Command", href: "/rescue-dashboard", icon: "🚨" },
+    { title: "Live SOS Queue", href: "/dashboard/sos", icon: "🆘" },
+    { title: "Heatmap & Map", href: "/rescue-dashboard#map", icon: "📍" },
+    { title: "Resource Status", href: "/rescue-dashboard#resources", icon: "📦" },
+    { title: "AI Triage Insights", href: "/dashboard/ai-assistant", icon: "🤖" },
   ],
-  Administrator: [
-    { title: "System Administration", href: "/admin", icon: "⚙️" },
-    { title: "Emergency SOS Center", href: "/dashboard/sos", icon: "🆘" },
-    { title: "User & Role Management", href: "/admin#users", icon: "👥" },
-    { title: "System Analytics & Logs", href: "/admin#analytics", icon: "📊" },
-    { title: "Broadcast Crisis Alert", href: "/admin#alert", icon: "⚠️" },
+  authority: [
+    { title: "Crisis Control Center", href: "/rescue-dashboard", icon: "🏛️" },
+    { title: "SOS Incident Monitor", href: "/dashboard/sos", icon: "🆘" },
+    { title: "Priority Analytics", href: "/rescue-dashboard#analytics", icon: "📊" },
+    { title: "AI Assistant", href: "/dashboard/ai-assistant", icon: "🤖" },
+  ],
+  hospital: [
+    { title: "Medical Triage Board", href: "/rescue-dashboard", icon: "🏥" },
+    { title: "Incoming Victims", href: "/dashboard/sos", icon: "🆘" },
+    { title: "ICU & Bed Status", href: "/rescue-dashboard#beds", icon: "🛏️" },
+  ],
+  ngo: [
+    { title: "Relief Supply Board", href: "/rescue-dashboard", icon: "🤝" },
+    { title: "Shelter Occupancy", href: "/dashboard#shelters", icon: "🏠" },
+    { title: "Food & Aid Requests", href: "/dashboard/sos", icon: "📦" },
   ],
 };
 
 const ROLE_BADGE_STYLES: Record<UserRole, string> = {
-  Citizen: "bg-emerald-950 text-emerald-300 border-emerald-800",
-  "Rescue Team": "bg-amber-950 text-amber-300 border-amber-800",
-  Administrator: "bg-red-950 text-red-300 border-red-800",
+  citizen: "bg-emerald-950 text-emerald-300 border-emerald-800",
+  rescue: "bg-amber-950 text-amber-300 border-amber-800",
+  authority: "bg-red-950 text-red-300 border-red-800",
+  hospital: "bg-blue-950 text-blue-300 border-blue-800",
+  ngo: "bg-purple-950 text-purple-300 border-purple-800",
 };
 
 export const RoleSidebar: React.FC = () => {
@@ -47,8 +58,8 @@ export const RoleSidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
 
-  const role: UserRole = userProfile?.role || "Citizen";
-  const menuList = MENU_ITEMS[role] || MENU_ITEMS["Citizen"];
+  const role: UserRole = userProfile?.role || "citizen";
+  const menuList = MENU_ITEMS[role] || MENU_ITEMS["citizen"];
 
   const handleLogout = async () => {
     try {
@@ -97,7 +108,7 @@ export const RoleSidebar: React.FC = () => {
 
             {/* Role Badge */}
             <span
-              className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border ${ROLE_BADGE_STYLES[role]}`}
+              className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${ROLE_BADGE_STYLES[role]}`}
             >
               {role}
             </span>

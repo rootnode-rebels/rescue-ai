@@ -12,11 +12,12 @@ interface ProtectedRouteProps {
 
 export const getRoleDashboard = (role?: UserRole): string => {
   switch (role) {
-    case "Administrator":
-      return "/admin";
-    case "Rescue Team":
+    case "rescue":
+    case "authority":
+    case "hospital":
+    case "ngo":
       return "/rescue-dashboard";
-    case "Citizen":
+    case "citizen":
     default:
       return "/dashboard";
   }
@@ -49,10 +50,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 text-slate-100">
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100 font-sans">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-500 border-t-transparent"></div>
-          <p className="text-sm font-medium text-slate-400">Authenticating RescueAI session...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-500 border-t-transparent shadow-lg shadow-red-500/50" />
+          <p className="text-sm font-semibold text-slate-400">Authenticating RescueAI session...</p>
         </div>
       </div>
     );

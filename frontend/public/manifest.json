@@ -1,12 +1,25 @@
 {
-  "name": "RescueAI",
+  "name": "RescueAI Emergency Response Platform",
   "short_name": "RescueAI",
+  "description": "Offline-First AI Disaster Response & Emergency Coordination Platform for IEEE Hack Genesis 2026",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "description": "Offline-first SOS triage for disasters",
+  "orientation": "any",
+  "background_color": "#08101d",
+  "theme_color": "#dc2626",
+  "categories": ["utilities", "medical", "social"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

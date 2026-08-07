@@ -16,7 +16,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { RegisterFormData, LoginFormData, UserProfile } from "@/types/auth";
+import { RegisterFormData, LoginFormData, UserProfile, UserRole } from "@/types/auth";
 
 const USERS_COLLECTION = "users";
 
@@ -40,7 +40,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 /**
  * Registers a new user with Email & Password.
- * Automatically creates a Firestore user document with default role 'Citizen'.
+ * Creates a Firestore user document with selected role, organization, and badge number.
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -55,7 +55,9 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
     name: data.name,
     email: data.email,
     phone: data.phone || "",
-    role: "Citizen", // Default role
+    role: data.role || "citizen",
+    organization: data.organization || "",
+    badgeNumber: data.badgeNumber || "",
     photoURL: user.photoURL || null,
     createdAt: now,
     lastLogin: now,
@@ -101,7 +103,7 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
       name: user.displayName || "User",
       email: user.email || data.email,
       phone: user.phoneNumber || "",
-      role: "Citizen",
+      role: "citizen",
       photoURL: user.photoURL || null,
       createdAt: now,
       lastLogin: now,
@@ -119,9 +121,9 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 
 /**
  * Signs in or registers user via Google Authentication.
- * Automatically creates Firestore document with default role 'Citizen' if new user.
+ * Automatically creates Firestore document with requested role if new user.
  */
-export async function loginWithGoogle(): Promise<UserProfile> {
+export async function loginWithGoogle(role: UserRole = "citizen"): Promise<UserProfile> {
   const userCredential = await signInWithPopup(auth, googleProvider);
   const user = userCredential.user;
   const now = new Date().toISOString();
@@ -129,13 +131,13 @@ export async function loginWithGoogle(): Promise<UserProfile> {
   let profile = await getUserProfile(user.uid);
 
   if (!profile) {
-    // New Google User - Create Firestore doc with default role Citizen
+    // New Google User - Create Firestore doc with selected role
     profile = {
       uid: user.uid,
       name: user.displayName || "Google User",
       email: user.email || "",
       phone: user.phoneNumber || "",
-      role: "Citizen",
+      role: role,
       photoURL: user.photoURL || null,
       createdAt: now,
       lastLogin: now,

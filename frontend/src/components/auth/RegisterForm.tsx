@@ -13,14 +13,25 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Shield,
   ShieldCheck,
-  Users,
   AlertCircle,
+  Building2,
+  BadgeCheck,
+  Ambulance,
+  Building,
+  HeartHandshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { RegisterFormData } from "@/types/auth";
+import { RegisterFormData, UserRole } from "@/types/auth";
 import { getRoleDashboard } from "./ProtectedRoute";
+
+const ROLES: { id: UserRole; title: string; subtitle: string; icon: React.ElementType }[] = [
+  { id: "citizen", title: "Citizen", subtitle: "Emergency Help & Alerts", icon: User },
+  { id: "rescue", title: "Rescue Team", subtitle: "First Responder Dispatch", icon: Ambulance },
+  { id: "authority", title: "Authority", subtitle: "Emergency Management", icon: ShieldCheck },
+  { id: "hospital", title: "Hospital", subtitle: "Medical Facilities", icon: Building },
+  { id: "ngo", title: "NGO / Relief", subtitle: "Shelter & Aid Supply", icon: HeartHandshake },
+];
 
 export const RegisterForm: React.FC = () => {
   const { register, loginWithGoogle } = useAuth();
@@ -32,6 +43,9 @@ export const RegisterForm: React.FC = () => {
     phone: "",
     password: "",
     confirmPassword: "",
+    role: "citizen",
+    organization: "",
+    badgeNumber: "",
     acceptTerms: false,
   });
 
@@ -65,6 +79,15 @@ export const RegisterForm: React.FC = () => {
 
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (formData.role !== "citizen") {
+      if (!formData.organization?.trim()) {
+        newErrors.organization = "Organization / Unit name is required for official roles.";
+      }
+      if (!formData.badgeNumber?.trim()) {
+        newErrors.badgeNumber = "Badge / ID number is required for verification.";
+      }
     }
 
     if (!formData.acceptTerms) {
@@ -112,7 +135,7 @@ export const RegisterForm: React.FC = () => {
     setErrors({});
 
     try {
-      const profile = await loginWithGoogle();
+      const profile = await loginWithGoogle(formData.role);
       if (profile) {
         const targetDashboard = getRoleDashboard(profile.role);
         router.push(targetDashboard);
@@ -127,13 +150,12 @@ export const RegisterForm: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl flex flex-col items-center space-y-8 my-6">
-      {/* Premium White Floating Registration Card */}
+    <div className="w-full max-w-3xl flex flex-col items-center space-y-8 my-6">
       <motion.div
         initial={{ opacity: 0, y: 25, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl shadow-slate-900/10 border border-gray-100 p-8 sm:p-10 relative z-10"
+        className="w-full bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl shadow-slate-900/10 border border-gray-100 p-8 sm:p-10 relative z-10"
       >
         {/* Card Header */}
         <div className="text-center mb-8">
@@ -141,10 +163,10 @@ export const RegisterForm: React.FC = () => {
             <ShieldAlert className="w-8 h-8" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900">
-            Create <span className="text-red-600">Citizen</span> Account
+            Create <span className="text-red-600">RescueAI</span> Account
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 font-medium mt-2 max-w-md mx-auto">
-            Join RescueAI for real-time disaster alerts and emergency coordination.
+            Select your emergency role to access localized disaster response tools.
           </p>
         </div>
 
@@ -160,9 +182,39 @@ export const RegisterForm: React.FC = () => {
           </motion.div>
         )}
 
+        {/* Role Selection Selector */}
+        <div className="mb-6">
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-3">
+            Select Role:
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            {ROLES.map((r) => {
+              const Icon = r.icon;
+              const isSelected = formData.role === r.id;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, role: r.id })}
+                  className={`p-3 rounded-2xl border flex flex-col items-center text-center transition-all ${
+                    isSelected
+                      ? "border-red-600 bg-red-50/80 ring-2 ring-red-500/30 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 mb-1.5 ${isSelected ? "text-red-600" : "text-gray-500"}`} />
+                  <span className={`text-xs font-bold ${isSelected ? "text-red-900" : "text-gray-800"}`}>
+                    {r.title}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Row 1: Full Name (Full Width) */}
+          {/* Full Name */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Full Name</label>
             <div className="relative">
@@ -173,17 +225,17 @@ export const RegisterForm: React.FC = () => {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="John Doe"
+                placeholder="Dr. Sarah Jenkins / Officer Mark Davis"
                 disabled={loading}
                 className={`w-full h-14 pl-12 pr-4 bg-gray-50 border ${
                   errors.name ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium`}
               />
             </div>
             {errors.name && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.name}</p>}
           </div>
 
-          {/* Row 2: Email & Phone (Two Columns on Desktop) */}
+          {/* Email & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2">Email Address</label>
@@ -195,11 +247,11 @@ export const RegisterForm: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="john@example.com"
+                  placeholder="responder@rescueai.gov"
                   disabled={loading}
                   className={`w-full h-14 pl-12 pr-4 bg-gray-50 border ${
                     errors.email ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium`}
                 />
               </div>
               {errors.email && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.email}</p>}
@@ -219,14 +271,71 @@ export const RegisterForm: React.FC = () => {
                   disabled={loading}
                   className={`w-full h-14 pl-12 pr-4 bg-gray-50 border ${
                     errors.phone ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all font-medium`}
                 />
               </div>
               {errors.phone && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.phone}</p>}
             </div>
           </div>
 
-          {/* Row 3: Password & Confirm Password (Two Columns on Desktop) */}
+          {/* Conditional Official Fields for Non-Citizens */}
+          {formData.role !== "citizen" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  Organization / Department
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.organization}
+                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                    placeholder="e.g., National Disaster Response Force"
+                    disabled={loading}
+                    className={`w-full h-14 pl-12 pr-4 bg-gray-50 border ${
+                      errors.organization ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
+                    } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-medium`}
+                  />
+                </div>
+                {errors.organization && (
+                  <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.organization}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  Official Badge / ID Number
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <BadgeCheck className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.badgeNumber}
+                    onChange={(e) => setFormData({ ...formData, badgeNumber: e.target.value })}
+                    placeholder="e.g., RES-9082-NDRF"
+                    disabled={loading}
+                    className={`w-full h-14 pl-12 pr-4 bg-gray-50 border ${
+                      errors.badgeNumber ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
+                    } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-medium`}
+                  />
+                </div>
+                {errors.badgeNumber && (
+                  <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.badgeNumber}</p>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Password & Confirm Password */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2">Password</label>
@@ -242,13 +351,12 @@ export const RegisterForm: React.FC = () => {
                   disabled={loading}
                   className={`w-full h-14 pl-12 pr-12 bg-gray-50 border ${
                     errors.password ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-medium`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-                  aria-label="Toggle password visibility"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -270,13 +378,12 @@ export const RegisterForm: React.FC = () => {
                   disabled={loading}
                   className={`w-full h-14 pl-12 pr-12 bg-gray-50 border ${
                     errors.confirmPassword ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 font-medium`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-                  aria-label="Toggle confirm password visibility"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -287,7 +394,7 @@ export const RegisterForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Row 4: Accept Terms Checkbox */}
+          {/* Accept Terms Checkbox */}
           <div className="pt-1">
             <div className="flex items-start">
               <input
@@ -304,7 +411,7 @@ export const RegisterForm: React.FC = () => {
             {errors.acceptTerms && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.acceptTerms}</p>}
           </div>
 
-          {/* Row 5: Register Submit Button */}
+          {/* Register Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -313,18 +420,18 @@ export const RegisterForm: React.FC = () => {
             {loading ? (
               <>
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Creating Citizen Account...</span>
+                <span>Creating Account...</span>
               </>
             ) : (
               <>
-                <span>Register Account</span>
+                <span>Register as {ROLES.find((r) => r.id === formData.role)?.title}</span>
                 <ArrowRight className="w-4 h-4 text-white" />
               </>
             )}
           </button>
         </form>
 
-        {/* Row 6: Divider */}
+        {/* Divider */}
         <div className="my-8 flex items-center gap-3">
           <div className="h-px flex-1 bg-gray-200" />
           <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-widest">
@@ -333,7 +440,7 @@ export const RegisterForm: React.FC = () => {
           <div className="h-px flex-1 bg-gray-200" />
         </div>
 
-        {/* Row 7: Google Register Button */}
+        {/* Google Register Button */}
         <button
           type="button"
           onClick={handleGoogleRegister}
@@ -361,7 +468,7 @@ export const RegisterForm: React.FC = () => {
           <span>Register with Google</span>
         </button>
 
-        {/* Row 8: Already Registered Redirect */}
+        {/* Already Registered Link */}
         <p className="mt-8 text-center text-xs text-gray-500 font-medium">
           Already registered?{" "}
           <Link
@@ -373,42 +480,6 @@ export const RegisterForm: React.FC = () => {
           </Link>
         </p>
       </motion.div>
-
-      {/* Security Section: 3 Bottom Responsive Feature Cards */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-        {/* Card 1: Secure Registration (Red) */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 bg-red-50 text-red-600 rounded-xl border border-red-100 shrink-0">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-black text-gray-900">Secure Registration</h4>
-            <p className="text-[10px] text-gray-500 font-medium">Protected by Firebase Auth</p>
-          </div>
-        </div>
-
-        {/* Card 2: 24/7 Emergency Support (Blue) */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-black text-gray-900">24/7 Emergency Support</h4>
-            <p className="text-[10px] text-gray-500 font-medium">Always Ready to Help</p>
-          </div>
-        </div>
-
-        {/* Card 3: Trusted Platform (Green) */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-black text-gray-900">Trusted Platform</h4>
-            <p className="text-[10px] text-gray-500 font-medium">Built for Citizens &amp; Rescuers</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

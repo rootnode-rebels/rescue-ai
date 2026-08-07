@@ -1,17 +1,41 @@
-// Minimal service worker: cache shell and listen for sync (optional)
-const CACHE_NAME = 'rescueai-shell-v1';
-const toCache = ['/', '/index.html', '/styles/globals.css'];
+const CACHE_NAME = 'rescueai-v1';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/globals.css',
+];
 
-self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(toCache)));
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
 
-self.addEventListener('fetch', event => {
-  // Only cache-first for shell assets; let API calls go network-first
+self.addEventListener('fetch', (event) => {
+  // Network first, falling back to cache
   event.respondWith(
-    caches.match(event.request).then(resp => resp || fetch(event.request))
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
   );
 });
