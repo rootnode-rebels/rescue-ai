@@ -12,6 +12,8 @@ import {
   MapPin,
   Compass,
   AlertTriangle,
+  ArrowRight,
+  Check,
 } from "lucide-react";
 import {
   subscribeLiveSOSQueue,
@@ -199,6 +201,7 @@ export const RescueDashboardLayout: React.FC = () => {
                 filteredRequests.map((req) => {
                   const dist = getDistanceMiles(req.latitude, req.longitude);
                   const selectedSquad = squadAssignments[req.requestId] || req.assignedTeamName || availableSquads[0];
+                  const status = req.status;
 
                   return (
                     <div
@@ -264,47 +267,66 @@ export const RescueDashboardLayout: React.FC = () => {
                         </select>
                       </div>
 
-                      {/* Complete Status Resolution Buttons Matrix */}
-                      <div className="space-y-2 pt-1 border-t border-slate-900">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Set Incident Resolution Status</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {/* STEP-BY-STEP VANISHING RESOLUTION BUTTONS MATRIX */}
+                      <div className="pt-2 border-t border-slate-900">
+                        {(status === "Pending" || status === "PENDING") && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleUpdateStatusAndSquad(req.requestId, "Accepted");
                             }}
-                            className="py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[11px] rounded-xl shadow-md transition-all uppercase"
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-blue-950 uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
                           >
-                            Accept
+                            <span>1-Click Accept SOS &amp; Dispatch Team</span>
+                            <ArrowRight className="w-4 h-4" />
                           </button>
+                        )}
+
+                        {(status === "Accepted" || status === "ACCEPTED") && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleUpdateStatusAndSquad(req.requestId, "Team On The Way");
                             }}
-                            className="py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-[11px] rounded-xl shadow-md transition-all uppercase"
+                            className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-black text-xs rounded-xl shadow-lg shadow-amber-950 uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
                           >
-                            En Route
+                            <span>1-Click Set Squad En Route</span>
+                            <ArrowRight className="w-4 h-4" />
                           </button>
+                        )}
+
+                        {(status === "Team On The Way" || status === "IN_PROGRESS" || status === "In Progress") && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleUpdateStatusAndSquad(req.requestId, "Reached");
                             }}
-                            className="py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] rounded-xl shadow-md transition-all uppercase"
+                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-lg shadow-indigo-950 uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
                           >
-                            Reached
+                            <span>1-Click Set Squad Reached Scene</span>
+                            <ArrowRight className="w-4 h-4" />
                           </button>
+                        )}
+
+                        {status === "Reached" && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleUpdateStatusAndSquad(req.requestId, "Resolved");
                             }}
-                            className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] rounded-xl shadow-md transition-all uppercase"
+                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-950 uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
                           >
-                            Resolve
+                            <span>1-Click Mark Rescue Resolved</span>
+                            <Check className="w-4 h-4" />
                           </button>
-                        </div>
+                        )}
+
+                        {(status === "Resolved" || status === "Completed" || status === "RESOLVED" || status === "COMPLETED") && (
+                          <div className="w-full py-3 bg-emerald-950/80 border border-emerald-800 text-emerald-400 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 uppercase tracking-wider">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <span>Rescue Operation Resolved &amp; Completed</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
