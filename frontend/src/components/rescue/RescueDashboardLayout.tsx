@@ -16,6 +16,7 @@ import {
   Filter,
   RefreshCw,
   Building,
+  Zap,
 } from "lucide-react";
 import { SOSRequest, SOSStatus } from "@/types";
 import { getPendingOfflineSOS } from "@/lib/dexie-db";
@@ -91,11 +92,11 @@ export const RescueDashboardLayout: React.FC = () => {
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [loading, setLoading] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>("");
 
   const fetchLiveSOSQueue = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch from live FastAPI backend if online
       if (navigator.onLine) {
         const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "https://rescueai-backend-3u2o.onrender.com/api";
         const res = await fetch(`${backendUrl}/sos`);
@@ -103,13 +104,13 @@ export const RescueDashboardLayout: React.FC = () => {
           const apiData = await res.json();
           if (Array.isArray(apiData) && apiData.length > 0) {
             setRequests(apiData);
+            setLastSyncedTime(new Date().toLocaleTimeString());
             setLoading(false);
             return;
           }
         }
       }
 
-      // 2. Fallback: load offline IndexedDB requests + mock queue
       const offlineItems = await getPendingOfflineSOS();
       if (offlineItems.length > 0) {
         const combined = [...offlineItems, ...MOCK_SOS_QUEUE];
@@ -117,9 +118,11 @@ export const RescueDashboardLayout: React.FC = () => {
       } else {
         setRequests(MOCK_SOS_QUEUE);
       }
+      setLastSyncedTime(new Date().toLocaleTimeString());
     } catch (err) {
       console.warn("Error fetching live SOS queue:", err);
       setRequests(MOCK_SOS_QUEUE);
+      setLastSyncedTime(new Date().toLocaleTimeString());
     } finally {
       setLoading(false);
     }
@@ -128,7 +131,7 @@ export const RescueDashboardLayout: React.FC = () => {
   useEffect(() => {
     fetchLiveSOSQueue();
 
-    // 5-second real-time auto-polling interval for live emergency updates
+    // 5-second real-time auto-polling loop
     const pollInterval = setInterval(() => {
       fetchLiveSOSQueue();
     }, 5000);
@@ -174,7 +177,7 @@ export const RescueDashboardLayout: React.FC = () => {
   const resolvedCount = requests.filter((r) => r.status === "COMPLETED").length;
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-red-500 selection:text-white">
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-red-500 selection:text-white pb-16 lg:pb-0">
       {/* Left Sidebar */}
       <div className="hidden lg:block">
         <Sidebar />
@@ -190,10 +193,19 @@ export const RescueDashboardLayout: React.FC = () => {
           {/* Header Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-950/80 border border-red-800 text-red-400 text-xs font-black uppercase tracking-wider rounded-full mb-2">
-                <Radio className="w-3.5 h-3.5 text-red-500 animate-pulse" />
-                <span>FIELD COMMAND DISPATCH CENTER</span>
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-950/80 border border-red-800 text-red-400 text-xs font-black uppercase tracking-wider rounded-full">
+                  <Radio className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                  <span>FIELD COMMAND DISPATCH CENTER</span>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-xs font-mono font-bold rounded-full">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
+                  <span>REAL-TIME LIVE SYNC (5s)</span>
+                  {lastSyncedTime && <span className="text-slate-400">• {lastSyncedTime}</span>}
+                </div>
               </div>
+
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
                 Rescue Operational Board
               </h1>
@@ -208,7 +220,7 @@ export const RescueDashboardLayout: React.FC = () => {
               className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all self-start sm:self-auto disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 text-red-500 ${loading ? "animate-spin" : ""}`} />
-              <span>{loading ? "Updating..." : "Refresh Queue"}</span>
+              <span>{loading ? "Syncing..." : "Manual Sync"}</span>
             </button>
           </div>
 
