@@ -1,0 +1,49 @@
+# Node / Next.js dependencies and builds
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/*.tsbuildinfo
+
+# Python / Virtual Environment
+backend/__pycache__/
+backend/*/__pycache__/
+backend/*/*/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+backend/.venv/
+backend/venv/
+
+# Environment Variables & Secrets
+.env
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.local
+*.env*.local
+frontend/.env*
+backend/.env*
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Generated
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

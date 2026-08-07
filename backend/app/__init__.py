@@ -1,0 +1,3 @@
+"""
+RescueAI Backend Package Initialization
+"""
