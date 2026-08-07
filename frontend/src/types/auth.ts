@@ -1,4 +1,4 @@
-export type UserRole = "Citizen" | "Rescue Team" | "Administrator";
+export type UserRole = "citizen" | "rescue" | "authority" | "hospital" | "ngo";
 
 export interface UserProfile {
   uid: string;
@@ -6,6 +6,8 @@ export interface UserProfile {
   email: string;
   phone: string;
   role: UserRole;
+  organization?: string;
+  badgeNumber?: string;
   photoURL: string | null;
   createdAt: string;
   lastLogin: string;
@@ -17,14 +19,17 @@ export interface RegisterFormData {
   email: string;
   phone: string;
   password: string;
-  confirmPassword: string;
-  acceptTerms: boolean;
+  confirmPassword?: string;
+  role: UserRole;
+  organization?: string;
+  badgeNumber?: string;
+  acceptTerms?: boolean;
 }
 
 export interface LoginFormData {
   email: string;
   password: string;
-  rememberMe: boolean;
+  rememberMe?: boolean;
 }
 
 export interface AuthContextType {
@@ -33,7 +38,7 @@ export interface AuthContextType {
   loading: boolean;
   login: (data: LoginFormData) => Promise<UserProfile | null>;
   register: (data: RegisterFormData) => Promise<UserProfile | null>;
-  loginWithGoogle: () => Promise<UserProfile | null>;
+  loginWithGoogle: (role?: UserRole) => Promise<UserProfile | null>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;

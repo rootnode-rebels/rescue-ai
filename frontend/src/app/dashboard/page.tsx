@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
 export default function CitizenDashboardPage() {
   return (
-    <ProtectedRoute allowedRoles={["Citizen"]}>
+    <ProtectedRoute allowedRoles={["citizen"]}>
       <DashboardLayout />
     </ProtectedRoute>
   );

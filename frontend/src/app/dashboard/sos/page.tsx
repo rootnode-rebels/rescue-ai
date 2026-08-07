@@ -6,7 +6,7 @@ import { SOSModuleLayout } from "@/components/sos/SOSModuleLayout";
 
 export default function DashboardSOSPage() {
   return (
-    <ProtectedRoute allowedRoles={["Citizen", "Administrator", "Rescue Team"]}>
+    <ProtectedRoute allowedRoles={["citizen", "rescue", "authority", "hospital", "ngo"]}>
       <SOSModuleLayout />
     </ProtectedRoute>
   );

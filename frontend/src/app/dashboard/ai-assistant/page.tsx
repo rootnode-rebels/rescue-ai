@@ -6,7 +6,7 @@ import { ChatLayout } from "@/components/ai-assistant/ChatLayout";
 
 export default function DashboardAIAssistantPage() {
   return (
-    <ProtectedRoute allowedRoles={["Citizen", "Administrator", "Rescue Team"]}>
+    <ProtectedRoute allowedRoles={["citizen", "rescue", "authority", "hospital", "ngo"]}>
       <ChatLayout />
     </ProtectedRoute>
   );
