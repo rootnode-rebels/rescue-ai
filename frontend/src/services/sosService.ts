@@ -5,8 +5,6 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  query,
-  orderBy,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
@@ -47,7 +45,7 @@ export async function createSOSRequestInFirestore(
   try {
     await setDoc(doc(db, SOS_COLLECTION, requestId), fullRecord);
   } catch (err) {
-    console.warn("Firestore write fallback notice:", err);
+    console.warn("Firestore write notice:", err);
   }
 
   return fullRecord;
@@ -110,22 +108,24 @@ export async function deleteSOSRequestInFirestore(requestId: string): Promise<vo
 
 /**
  * Real-time onSnapshot() listener streaming all active SOS requests to Rescue Dashboard & Live Map.
- * Executes callback whenever a new request arrives or location updates.
+ * Unindexed query + in-memory sort prevents Firestore composite index errors!
  */
 export function subscribeLiveSOSQueue(
   callback: (requests: SOSFirestoreRequest[]) => void
 ): () => void {
   try {
     const sosRef = collection(db, SOS_COLLECTION);
-    const q = query(sosRef, orderBy("createdAt", "desc"));
-
     return onSnapshot(
-      q,
+      sosRef,
       (snapshot) => {
         const list: SOSFirestoreRequest[] = [];
         snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as SOSFirestoreRequest);
+          if (docSnap.exists()) {
+            list.push(docSnap.data() as SOSFirestoreRequest);
+          }
         });
+        // Sort descending by createdAt in JS memory for 100% reliability
+        list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         callback(list);
       },
       (error) => {

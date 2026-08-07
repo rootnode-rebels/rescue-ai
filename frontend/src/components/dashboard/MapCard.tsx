@@ -18,6 +18,10 @@ export const MapCard: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  const latestInc = liveIncidents.length > 0 ? liveIncidents[0] : null;
+  const lat = latestInc?.latitude || 37.7749;
+  const lng = latestInc?.longitude || -122.4194;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -33,7 +37,7 @@ export const MapCard: React.FC = () => {
             <h3 className="text-lg font-black text-slate-900">Live Geospatial Emergency Map</h3>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            Real-time GIS telemetry • 8 Shelters • {liveIncidents.length} Active SOS Markers
+            Real-time GIS telemetry • 8 Shelters • {liveIncidents.length} Active SOS Signals in Firestore
           </p>
         </div>
 
@@ -66,71 +70,34 @@ export const MapCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Map Graphics Canvas */}
+      {/* Map Graphics Canvas with Embedded Live Map */}
       <div className="relative h-80 sm:h-96 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
-        {/* Background Radar Mesh */}
-        <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px] opacity-70" />
+        <iframe
+          title="Citizen Emergency Map"
+          width="100%"
+          height="100%"
+          frameBorder="0"
+          scrolling="no"
+          src={`https://maps.google.com/maps?q=${lat},${lng}&z=${zoom}&output=embed`}
+          className="w-full h-full grayscale-[20%] contrast-[1.1] opacity-90"
+        />
 
-        {/* Concentric GIS Radar Sweeps */}
-        <div className="absolute w-72 h-72 rounded-full border border-blue-500/30 animate-ping opacity-40" />
-        <div className="absolute w-48 h-48 rounded-full border border-red-500/40" />
-
-        {/* Current User Position Node */}
-        <div className="relative z-20 flex flex-col items-center">
-          <div className="p-3 bg-red-600 rounded-full text-white shadow-xl shadow-red-600/60 animate-bounce">
-            <MapPin className="w-6 h-6" />
+        {/* Floating Telemetry Info Overlay */}
+        <div className="absolute top-4 right-4 z-20 bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-xl max-w-xs text-xs text-white">
+          <div className="flex items-center gap-2 mb-1">
+            <Radio className="w-4 h-4 text-red-500 animate-pulse" />
+            <span className="font-black">Firestore Telemetry Stream</span>
           </div>
-          <span className="mt-1 px-2.5 py-1 bg-slate-900/90 text-[10px] font-mono font-bold text-white rounded-lg border border-slate-700 shadow-md">
-            YOU ARE HERE (GPS Locked)
-          </span>
+          {latestInc ? (
+            <p className="text-[11px] text-slate-300 font-mono">
+              Active SOS by <strong className="text-red-400">{latestInc.citizenName}</strong> ({latestInc.latitude.toFixed(4)}°, {latestInc.longitude.toFixed(4)}°)
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400">GPS Locked. Ready to broadcast SOS signal.</p>
+          )}
         </div>
 
-        {/* Shelter Node 1 */}
-        {(activeLayer === "all" || activeLayer === "shelters") && (
-          <div className="absolute top-12 right-20 z-10 flex flex-col items-center group cursor-pointer">
-            <div className="p-2.5 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/40 group-hover:scale-110 transition-transform">
-              <Shield className="w-5 h-5" />
-            </div>
-            <span className="mt-1 px-2 py-0.5 bg-slate-900/90 text-[9px] font-bold text-blue-300 rounded-md border border-slate-800">
-              Central Shelter (0.8 mi)
-            </span>
-          </div>
-        )}
-
-        {/* Shelter Node 2 */}
-        {(activeLayer === "all" || activeLayer === "shelters") && (
-          <div className="absolute bottom-12 right-16 z-10 flex flex-col items-center group cursor-pointer">
-            <div className="p-2.5 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-600/40 group-hover:scale-110 transition-transform">
-              <Shield className="w-5 h-5" />
-            </div>
-            <span className="mt-1 px-2 py-0.5 bg-slate-900/90 text-[9px] font-bold text-indigo-300 rounded-md border border-slate-800">
-              City Arena (1.4 mi)
-            </span>
-          </div>
-        )}
-
-        {/* Active Live Firestore Incident Markers */}
-        {(activeLayer === "all" || activeLayer === "incidents") &&
-          liveIncidents.map((inc, index) => (
-            <div
-              key={inc.requestId}
-              style={{
-                position: "absolute",
-                left: `${20 + ((index * 25) % 60)}%`,
-                top: `${30 + ((index * 20) % 50)}%`,
-              }}
-              className="z-10 flex flex-col items-center group cursor-pointer"
-            >
-              <div className="p-2.5 bg-red-600 text-white rounded-full animate-pulse shadow-lg shadow-red-600/60 group-hover:scale-110 transition-transform">
-                <Radio className="w-4 h-4" />
-              </div>
-              <span className="mt-1 px-2 py-0.5 bg-red-950/90 text-[9px] font-mono font-bold text-red-300 rounded-md border border-red-800 whitespace-nowrap shadow-md">
-                {inc.citizenName} ({inc.latitude.toFixed(2)}°, {inc.longitude.toFixed(2)}°)
-              </span>
-            </div>
-          ))}
-
-        {/* Map Floating Controls */}
+        {/* Map Floating Zoom Controls */}
         <div className="absolute top-4 left-4 z-30 bg-slate-900/90 backdrop-blur-md p-2 rounded-2xl border border-slate-800 flex flex-col gap-2 shadow-xl">
           <button
             onClick={() => setZoom(Math.min(zoom + 1, 18))}
@@ -150,7 +117,7 @@ export const MapCard: React.FC = () => {
 
         <div className="absolute bottom-4 right-4 z-30 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-800 text-[10px] font-mono text-slate-300 flex items-center gap-2">
           <Compass className="w-4 h-4 text-blue-400 animate-spin" />
-          <span>ZOOM: {zoom}X • FIRESTORE LIVE GIS</span>
+          <span>ZOOM: {zoom}X • FIRESTORE REALTIME GPS</span>
         </div>
       </div>
     </motion.div>

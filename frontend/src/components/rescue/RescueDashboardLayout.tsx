@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "../dashboard/Sidebar";
 import { TopNavbar } from "../dashboard/TopNavbar";
 import { StatsCard } from "../ui/StatsCard";
-import { MapCard } from "../common/MapCard";
 import { BottomMobileNav } from "../dashboard/BottomMobileNav";
 import {
   ShieldAlert,
@@ -13,95 +12,39 @@ import {
   Users,
   Radio,
   Filter,
-  RefreshCw,
-  Building,
   Zap,
   Navigation,
   Check,
   Flame,
-  User,
   Phone,
   MapPin,
-  Clock,
   CheckCheck,
+  PlusCircle,
+  Clock,
+  Compass,
 } from "lucide-react";
 import {
   subscribeLiveSOSQueue,
   updateSOSStatusInFirestore,
+  createSOSRequestInFirestore,
 } from "@/services/sosService";
-import { SOSFirestoreRequest, SOSStatus } from "@/types/auth";
-
-const MOCK_FALLBACK_QUEUE: SOSFirestoreRequest[] = [
-  {
-    requestId: "SOS-9081",
-    uid: "user-101",
-    citizenName: "David Miller",
-    userPhone: "+1 (555) 234-5678",
-    category: "FLOOD",
-    description: "Rising flood water trapped 4 family members on roof. Water level rising fast near river bank.",
-    latitude: 37.7749,
-    longitude: -122.4194,
-    address: "1420 Market St, Sector 4, Bay Area",
-    priority: "CRITICAL",
-    status: "Pending",
-    peopleCount: 4,
-    medicalNeeds: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    requestId: "SOS-9082",
-    uid: "user-102",
-    citizenName: "Elena Rostova",
-    userPhone: "+1 (555) 987-6543",
-    category: "EARTHQUAKE",
-    description: "Building wall collapsed blocking main exit. 2 adults trapped inside ground floor apartment.",
-    latitude: 37.7833,
-    longitude: -122.4167,
-    address: "850 Mission St, Bay Area",
-    priority: "HIGH",
-    status: "Pending",
-    peopleCount: 2,
-    medicalNeeds: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    requestId: "SOS-9083",
-    uid: "user-103",
-    citizenName: "Marcus Vance",
-    userPhone: "+1 (555) 456-7890",
-    category: "FIRE",
-    description: "Electrical fire in commercial warehouse basement. Smoke spreading to nearby residential block.",
-    latitude: 37.7695,
-    longitude: -122.4469,
-    address: "2100 Geary Blvd, Bay Area",
-    priority: "HIGH",
-    status: "Accepted",
-    assignedRescue: "team-4",
-    assignedTeamName: "NDRF Unit 4 - Sector Fire Response",
-    peopleCount: 6,
-    medicalNeeds: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { SOSFirestoreRequest } from "@/types/auth";
 
 export const RescueDashboardLayout: React.FC = () => {
-  const [requests, setRequests] = useState<SOSFirestoreRequest[]>(MOCK_FALLBACK_QUEUE);
+  const [requests, setRequests] = useState<SOSFirestoreRequest[]>([]);
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [lastSyncedTime, setLastSyncedTime] = useState<string>("");
+  const [activeSOSForMap, setActiveSOSForMap] = useState<SOSFirestoreRequest | null>(null);
 
   // Firestore onSnapshot() Real-time Queue Subscription
   useEffect(() => {
     const unsubscribe = subscribeLiveSOSQueue((liveList) => {
-      if (liveList && liveList.length > 0) {
-        setRequests(liveList);
-      } else {
-        setRequests(MOCK_FALLBACK_QUEUE);
-      }
+      setRequests(liveList);
       setLastSyncedTime(new Date().toLocaleTimeString());
+      if (liveList && liveList.length > 0 && !activeSOSForMap) {
+        setActiveSOSForMap(liveList[0]);
+      }
     });
 
     return () => unsubscribe();
@@ -111,12 +54,30 @@ export const RescueDashboardLayout: React.FC = () => {
     await updateSOSStatusInFirestore(requestId, "Accepted", "Coast Guard Rescue Alpha");
   };
 
-  const handleCompleteRequest = async (requestId: string) => {
-    await updateSOSStatusInFirestore(requestId, "Completed");
+  const handleSetStatus = async (requestId: string, status: any) => {
+    await updateSOSStatusInFirestore(requestId, status, "Coast Guard Rescue Alpha");
   };
 
   const handleNavigate = (lat: number, lng: number) => {
     window.open(`https://maps.google.com/?q=${lat},${lng}`, "_blank");
+  };
+
+  const handleGenerateTestSOS = async () => {
+    const testId = "sos-" + Date.now();
+    await createSOSRequestInFirestore({
+      requestId: testId,
+      citizenName: "Sarah Jenkins",
+      userPhone: "+1 (555) 987-6543",
+      category: "FLOOD",
+      description: "Flood water trapped 3 citizens in residential sector. Need boat evacuation urgently.",
+      priority: "CRITICAL",
+      status: "Pending",
+      latitude: 37.7749 + (Math.random() - 0.5) * 0.02,
+      longitude: -122.4194 + (Math.random() - 0.5) * 0.02,
+      address: "Sector 4 Emergency Flood Zone",
+      peopleCount: 3,
+      medicalNeeds: true,
+    });
   };
 
   const filteredRequests = requests.filter((req) => {
@@ -128,6 +89,9 @@ export const RescueDashboardLayout: React.FC = () => {
   const criticalCount = requests.filter((r) => r.priority === "CRITICAL" && r.status !== "Completed").length;
   const activeCount = requests.filter((r) => r.status !== "Completed").length;
   const resolvedCount = requests.filter((r) => r.status === "Completed").length;
+
+  const currentMapLat = activeSOSForMap?.latitude || (requests.length > 0 ? requests[0].latitude : 37.7749);
+  const currentMapLng = activeSOSForMap?.longitude || (requests.length > 0 ? requests[0].longitude : -122.4194);
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-red-500 selection:text-white pb-16 lg:pb-0">
@@ -154,8 +118,8 @@ export const RescueDashboardLayout: React.FC = () => {
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-xs font-mono font-bold rounded-full">
                   <Zap className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
-                  <span>FIRESTORE ONSNAPSHOT REAL-TIME FEED</span>
-                  {lastSyncedTime && <span className="text-slate-400">• {lastSyncedTime}</span>}
+                  <span>FIRESTORE REAL-TIME WEBSOCKET FEED ({requests.length} SIGNALS)</span>
+                  {lastSyncedTime && <span className="text-slate-400">• SYNC {lastSyncedTime}</span>}
                 </div>
               </div>
 
@@ -166,6 +130,14 @@ export const RescueDashboardLayout: React.FC = () => {
                 Real-time incident dispatch, live map markers, and Firestore status sync.
               </p>
             </div>
+
+            <button
+              onClick={handleGenerateTestSOS}
+              className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-red-950 transition-all uppercase tracking-wider self-start sm:self-auto"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Simulate Citizen SOS</span>
+            </button>
           </div>
 
           {/* Operational Metrics Cards */}
@@ -231,16 +203,32 @@ export const RescueDashboardLayout: React.FC = () => {
               {/* Triage Queue Incident Cards */}
               <div className="space-y-4">
                 {filteredRequests.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-900/50 rounded-3xl border border-slate-800">
-                    <p className="text-sm font-semibold text-slate-400">
-                      No active emergency requests matching current filter.
-                    </p>
+                  <div className="p-8 text-center bg-slate-900/80 rounded-3xl border border-slate-800 space-y-4">
+                    <Radio className="w-10 h-10 text-red-500 mx-auto animate-pulse" />
+                    <div>
+                      <h4 className="text-base font-black text-white">No Live SOS Signals in Firestore</h4>
+                      <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                        When a citizen presses the SOS button on their dashboard, their emergency details and live GPS coordinates will appear here instantly via Cloud Firestore onSnapshot().
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleGenerateTestSOS}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-md inline-flex items-center gap-1.5"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      <span>Create Test SOS Signal</span>
+                    </button>
                   </div>
                 ) : (
                   filteredRequests.map((req) => (
                     <div
                       key={req.requestId}
-                      className="p-5 bg-slate-900 border border-slate-800 rounded-3xl space-y-4 shadow-xl hover:border-slate-700 transition-all"
+                      onClick={() => setActiveSOSForMap(req)}
+                      className={`p-5 bg-slate-900 border rounded-3xl space-y-4 shadow-xl cursor-pointer transition-all ${
+                        activeSOSForMap?.requestId === req.requestId
+                          ? "border-red-500 ring-2 ring-red-500/20"
+                          : "border-slate-800 hover:border-slate-700"
+                      }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                         <div className="flex items-center gap-2.5">
@@ -265,7 +253,7 @@ export const RescueDashboardLayout: React.FC = () => {
                           <span className="px-2.5 py-0.5 bg-red-600 text-white font-black text-[10px] uppercase rounded-full">
                             {req.priority}
                           </span>
-                          <span className="px-2.5 py-0.5 bg-slate-800 text-slate-300 font-mono font-bold text-[10px] uppercase rounded-full border border-slate-700">
+                          <span className="px-2.5 py-0.5 bg-slate-800 text-amber-400 font-mono font-bold text-[10px] uppercase rounded-full border border-slate-700">
                             {req.status}
                           </span>
                         </div>
@@ -278,40 +266,75 @@ export const RescueDashboardLayout: React.FC = () => {
                       <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono gap-2 text-slate-300">
                         <div className="flex items-center gap-1.5">
                           <MapPin className="w-4 h-4 text-red-400" />
-                          <span>
-                            GPS: {req.latitude.toFixed(4)}°, {req.longitude.toFixed(4)}°
+                          <span className="text-emerald-400 font-bold">
+                            GPS Live: {req.latitude.toFixed(4)}° N, {req.longitude.toFixed(4)}° W
                           </span>
                         </div>
                         <span className="text-slate-400">{req.peopleCount} People Affected</span>
                       </div>
 
-                      {/* Action Buttons */}
+                      {/* Status Action Buttons */}
                       <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {req.status === "Pending" && (
+                        {(req.status === "Pending" || req.status === "PENDING") && (
                           <button
-                            onClick={() => handleAcceptRequest(req.requestId)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAcceptRequest(req.requestId);
+                            }}
                             className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all uppercase tracking-wider"
                           >
                             <Check className="w-4 h-4" />
-                            <span>Accept SOS Request</span>
+                            <span>1. Accept SOS</span>
+                          </button>
+                        )}
+
+                        {req.status === "Accepted" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetStatus(req.requestId, "Team On The Way");
+                            }}
+                            className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all uppercase tracking-wider"
+                          >
+                            <Ambulance className="w-4 h-4" />
+                            <span>2. Dispatch Team En Route</span>
+                          </button>
+                        )}
+
+                        {req.status === "Team On The Way" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetStatus(req.requestId, "Reached");
+                            }}
+                            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all uppercase tracking-wider"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            <span>3. Mark Reached Site</span>
                           </button>
                         )}
 
                         <button
-                          onClick={() => handleNavigate(req.latitude, req.longitude)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNavigate(req.latitude, req.longitude);
+                          }}
                           className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
                         >
                           <Navigation className="w-4 h-4 text-blue-400" />
-                          <span>GPS Navigation</span>
+                          <span>Google Maps GPS</span>
                         </button>
 
                         {req.status !== "Completed" && (
                           <button
-                            onClick={() => handleCompleteRequest(req.requestId)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetStatus(req.requestId, "Completed");
+                            }}
                             className="py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all"
                           >
                             <CheckCheck className="w-4 h-4" />
-                            <span>Mark Complete</span>
+                            <span>Mark Resolved</span>
                           </button>
                         )}
                       </div>
@@ -321,25 +344,55 @@ export const RescueDashboardLayout: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Map & Resource Panel (5 cols) */}
+            {/* Right Map & Telemetry Panel (5 cols) */}
             <div className="lg:col-span-5 space-y-6">
-              {/* Live Incident Map */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
+              {/* Embedded Live Google Geospatial Emergency Map */}
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                    Live Incident Map &amp; Realtime Markers
-                  </h3>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-white flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-red-500" />
+                      <span>Live GIS Telemetry Map</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {activeSOSForMap ? `Tracking ${activeSOSForMap.citizenName}` : "Showing Sector 4 Emergency Grid"}
+                    </p>
+                  </div>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-950 text-red-400 border border-red-800">
-                    FIRESTORE LIVE
+                    GPS TRACKED
                   </span>
                 </div>
-                <MapCard height="h-72" />
+
+                <div className="relative h-80 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+                  <iframe
+                    title="Live Incident Map"
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    scrolling="no"
+                    src={`https://maps.google.com/maps?q=${currentMapLat},${currentMapLng}&z=15&output=embed`}
+                    className="w-full h-full grayscale-[20%] contrast-[1.1]"
+                  />
+
+                  <div className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-800 text-xs font-mono text-slate-200 flex justify-between items-center">
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {currentMapLat.toFixed(4)}°, {currentMapLng.toFixed(4)}°
+                    </span>
+                    <button
+                      onClick={() => handleNavigate(currentMapLat, currentMapLng)}
+                      className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-[10px] uppercase tracking-wider"
+                    >
+                      Open Maps
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Resource Capacity Card */}
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
                 <h3 className="text-sm font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                  <Building className="w-4 h-4 text-red-500" />
+                  <Clock className="w-4 h-4 text-red-500" />
                   <span>Regional Capacity Monitor</span>
                 </h3>
 
