@@ -18,61 +18,20 @@ import {
   Building,
   HeartHandshake,
   Activity,
-  Sliders,
-  Radio,
-  Clock,
-  Check,
-  X,
   Trash2,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { UserRole, UserProfile, SOSFirestoreRequest } from "@/types/auth";
 import {
   subscribeLiveSOSQueue,
   deleteSOSRequestInFirestore,
 } from "@/services/sosService";
-
-const INITIAL_PENDING_APPLICATIONS: UserProfile[] = [
-  {
-    uid: "app-101",
-    name: "Capt. Alan Vance",
-    email: "alan.vance@coastguard.gov",
-    phone: "+1 (555) 902-1144",
-    role: "rescue_admin",
-    organization: "Coast Guard Air Rescue Unit 9",
-    badgeNumber: "CG-AIR-9081",
-    photoURL: null,
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    status: "pending_approval",
-  },
-  {
-    uid: "app-102",
-    name: "Dr. Elena Rostova",
-    email: "elena.rostova@centralhospital.org",
-    phone: "+1 (555) 349-2211",
-    role: "hospital",
-    organization: "Central Bay Trauma Center",
-    badgeNumber: "HOSP-BAY-402",
-    photoURL: null,
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    status: "pending_approval",
-  },
-  {
-    uid: "app-103",
-    name: "Marcus Miller",
-    email: "marcus@redcrossrelief.org",
-    phone: "+1 (555) 882-9900",
-    role: "ngo",
-    organization: "Red Cross Disaster Relief Battalion",
-    badgeNumber: "NGO-RC-8810",
-    photoURL: null,
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    status: "pending_approval",
-  },
-];
+import {
+  provisionUserAccountBySuperAdmin,
+  subscribeAllUsers,
+  updateUserRoleInFirestore,
+} from "@/services/authService";
 
 export default function AdminDashboardPage() {
   const { userProfile } = useAuth();
@@ -83,38 +42,70 @@ export default function AdminDashboardPage() {
   const [organization, setOrganization] = useState("");
   const [badgeNumber, setBadgeNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-  const [pendingApps, setPendingApps] = useState<UserProfile[]>(INITIAL_PENDING_APPLICATIONS);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [allSOS, setAllSOS] = useState<SOSFirestoreRequest[]>([]);
 
-  // Subscribe to real-time Firestore SOS queue
+  // Real-time Firestore users & SOS subscriptions
   useEffect(() => {
-    const unsubscribe = subscribeLiveSOSQueue((list) => {
+    const unsubSOS = subscribeLiveSOSQueue((list) => {
       setAllSOS(list);
     });
-    return () => unsubscribe();
+
+    const unsubUsers = subscribeAllUsers((usersList) => {
+      setAllUsers(usersList);
+    });
+
+    return () => {
+      unsubSOS();
+      unsubUsers();
+    };
   }, []);
 
-  const handleCreateOfficial = (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMsg(
-      `Official Account for "${name}" (${role.toUpperCase()}) provisioned & activated successfully!`
-    );
-    setName("");
-    setEmail("");
-    setPhone("");
-    setOrganization("");
-    setBadgeNumber("");
-    setPassword("");
+    setLoading(true);
+    setSuccessMsg("");
+    setErrorMsg("");
+
+    try {
+      const created = await provisionUserAccountBySuperAdmin({
+        name,
+        email,
+        phone,
+        password,
+        role,
+        organization,
+        badgeNumber,
+      });
+
+      setSuccessMsg(
+        `Account for "${created.name}" (${created.role.toUpperCase()}) provisioned successfully! User can now log in via the main /login page.`
+      );
+      setName("");
+      setEmail("");
+      setPhone("");
+      setOrganization("");
+      setBadgeNumber("");
+      setPassword("");
+    } catch (err: any) {
+      console.error("Account provisioning error:", err);
+      setErrorMsg(err?.message || "Failed to provision user account. Make sure password is at least 6 chars.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleApproveApplication = (uid: string) => {
-    setPendingApps((prev) => prev.filter((app) => app.uid !== uid));
-    setSuccessMsg(`Official Application ${uid} APPROVED! Credentials activated.`);
-  };
-
-  const handleRejectApplication = (uid: string) => {
-    setPendingApps((prev) => prev.filter((app) => app.uid !== uid));
+  const handleRoleChange = async (uid: string, newRole: UserRole) => {
+    try {
+      await updateUserRoleInFirestore(uid, newRole);
+      setSuccessMsg(`Role for user UID ${uid.slice(0, 6)} updated to "${newRole.toUpperCase()}"!`);
+    } catch (err) {
+      console.error("Error updating role:", err);
+    }
   };
 
   const handleDeleteFakeSOS = async (requestId: string) => {
@@ -123,7 +114,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={["global_admin", "authority"]}>
+    <ProtectedRoute allowedRoles={["global_admin"]}>
       <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-red-500 selection:text-white">
         {/* Header Bar */}
         <header className="bg-slate-900 border-b border-slate-800 px-6 py-6 flex items-center justify-between">
@@ -136,14 +127,14 @@ export default function AdminDashboardPage() {
                 Global Super Admin Dashboard
               </h1>
               <p className="text-xs text-slate-400 font-medium">
-                National EOC Management, Admin Provisioning &amp; Realtime Firestore Purge Console
+                Super Admin Account Provisioning, Real-time Role Assignment &amp; Live Firestore Purge
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 rounded-2xl border border-slate-700 text-xs font-bold">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Global Admin Rights Active ({userProfile?.name})</span>
+            <span>Super Admin Rights ({userProfile?.name || "Global Authority"})</span>
           </div>
         </header>
 
@@ -156,107 +147,66 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <span>Cloud Firestore Global Authority Node</span>
+                  <span>Cloud Firestore Authority Control Center</span>
                   <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono rounded-md">
-                    ACTIVE
+                    ONLINE
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Full control over user roles, rescue admin accounts, and spam SOS purges.
+                  All accounts log in through the same <strong className="text-white">/login</strong> page and get routed based on their Firestore document role.
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 text-xs font-mono">
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-slate-300">
-                Live Firestore SOS Signals: <strong className="text-red-400">{allSOS.length} ACTIVE</strong>
+                Registered Users: <strong className="text-emerald-400">{allUsers.length} TOTAL</strong>
               </div>
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-slate-300">
-                Pending Approvals: <strong className="text-amber-400">{pendingApps.length} APPLICANTS</strong>
+                Active SOS Requests: <strong className="text-red-400">{allSOS.length} LIVE</strong>
               </div>
             </div>
           </div>
 
-          {/* Real-time SOS Incident Purge Section */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-white flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <span>Real-Time Firestore SOS Directory (Global Purge)</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Inspect and purge fake or spam emergency requests from Cloud Firestore
-                </p>
-              </div>
-
-              <span className="px-3 py-1 bg-red-950 text-red-400 border border-red-800 text-xs font-bold rounded-full">
-                {allSOS.length} FIRESTORE DOCUMENTS
-              </span>
+          {/* Feedback Alerts */}
+          {successMsg && (
+            <div className="p-4 bg-emerald-950/80 border border-emerald-800 text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {allSOS.map((sos) => (
-                <div key={sos.requestId} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-sm font-black text-white">{sos.citizenName}</h4>
-                      <p className="text-[11px] font-mono text-slate-400">{sos.requestId}</p>
-                    </div>
-                    <span className="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 text-[10px] font-mono font-bold rounded">
-                      {sos.priority}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-300 line-clamp-2">{sos.description}</p>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-900 text-xs">
-                    <span className="text-slate-400 font-mono">Status: {sos.status}</span>
-                    <button
-                      onClick={() => handleDeleteFakeSOS(sos.requestId)}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 shadow-md"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Fake SOS</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+          )}
+          {errorMsg && (
+            <div className="p-4 bg-red-950/80 border border-red-800 text-red-300 rounded-2xl text-xs font-bold flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
-          </div>
+          )}
 
-          {/* 2 Column Layout: Create Rescue Admin & System Controls */}
+          {/* 2 Column Layout: Provisioning Tool & User Directory */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column (7 cols): Create Rescue Admin Account */}
-            <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
+            {/* Left Column (6 cols): Provision Account Tool */}
+            <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
               <div>
                 <h3 className="text-xl font-black text-white flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-red-500" />
-                  <span>Provision Rescue Admin Account</span>
+                  <span>Provision Account (Super Admin Tool)</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Exclusively authorized for Global Admins to add Rescue Admins, EOC Officers, Hospitals, and NGOs.
+                  Create verified <strong className="text-slate-200">Rescue Admin</strong>, <strong className="text-slate-200">Global Admin</strong>, or <strong className="text-slate-200">Citizen</strong> credentials. All users log in via <span className="font-mono text-red-400">/login</span>.
                 </p>
               </div>
 
-              {successMsg && (
-                <div className="p-4 bg-emerald-950/80 border border-emerald-800 text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <span>{successMsg}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleCreateOfficial} className="space-y-4">
+              <form onSubmit={handleCreateAccount} className="space-y-4">
                 {/* Select Role */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                    Official Role Type
+                    Select Account Role
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: "rescue_admin", title: "Rescue Admin", icon: Ambulance },
-                      { id: "hospital", title: "Hospital Admin", icon: Building },
-                      { id: "ngo", title: "NGO Relief Admin", icon: HeartHandshake },
+                      { id: "global_admin", title: "Global Admin", icon: ShieldCheck },
+                      { id: "citizen", title: "Citizen", icon: User },
                     ].map((item) => {
                       const IconComp = item.icon;
                       const isSelected = role === item.id;
@@ -281,7 +231,7 @@ export default function AdminDashboardPage() {
 
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Official Full Name</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                     <input
@@ -289,7 +239,7 @@ export default function AdminDashboardPage() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Commander Mark Vance"
+                      placeholder="Commander Sarah Vance"
                       className="w-full h-11 pl-10 pr-4 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                     />
                   </div>
@@ -298,7 +248,7 @@ export default function AdminDashboardPage() {
                 {/* Email & Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Official Email</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Account Email</label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                       <input
@@ -306,7 +256,7 @@ export default function AdminDashboardPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="rescue.admin@rescueai.gov"
+                        placeholder="officer@rescueai.gov"
                         className="w-full h-11 pl-10 pr-4 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
@@ -336,7 +286,6 @@ export default function AdminDashboardPage() {
                       <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
-                        required
                         value={organization}
                         onChange={(e) => setOrganization(e.target.value)}
                         placeholder="Coast Guard Battalion 4"
@@ -351,10 +300,9 @@ export default function AdminDashboardPage() {
                       <BadgeCheck className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
-                        required
                         value={badgeNumber}
                         onChange={(e) => setBadgeNumber(e.target.value)}
-                        placeholder="NDRF-8902-CG"
+                        placeholder="BADGE-CG-9081"
                         className="w-full h-11 pl-10 pr-4 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
@@ -363,7 +311,7 @@ export default function AdminDashboardPage() {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Temp Access Password</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Access Password</label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                     <input
@@ -379,58 +327,107 @@ export default function AdminDashboardPage() {
 
                 <button
                   type="submit"
-                  className="w-full h-12 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-red-950 transition-all mt-4"
+                  disabled={loading}
+                  className="w-full h-12 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-red-950 transition-all mt-4 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Provision Rescue Admin Credentials
+                  {loading ? (
+                    <span>Provisioning Firebase Credentials...</span>
+                  ) : (
+                    <span>Provision Account ({role.toUpperCase()})</span>
+                  )}
                 </button>
               </form>
             </div>
 
-            {/* Right Column (5 cols): Pending Registrations Queue */}
-            <div className="lg:col-span-5 space-y-6">
+            {/* Right Column (6 cols): Real-time User Role Management Directory */}
+            <div className="lg:col-span-6 space-y-6">
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-500" />
-                  <span>Pending Official Registrations</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span>Real-Time User Directory ({allUsers.length})</span>
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                    LIVE FIRESTORE
+                  </span>
+                </div>
 
-                {pendingApps.length === 0 ? (
-                  <p className="text-xs text-slate-400 font-medium">No pending official registration applications.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {pendingApps.map((app) => (
-                      <div key={app.uid} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="text-xs font-black text-white">{app.name}</h4>
-                            <p className="text-[10px] text-slate-400">{app.email}</p>
-                          </div>
-                          <span className="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 text-[9px] font-mono rounded font-bold uppercase">
-                            {app.role}
-                          </span>
+                <p className="text-xs text-slate-400">
+                  Change any user's role on the fly. When they log in via <strong className="text-white">/login</strong>, they immediately receive that role's dashboard privileges.
+                </p>
+
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                  {allUsers.map((u) => (
+                    <div key={u.uid} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                        <div>
+                          <h4 className="text-xs font-black text-white">{u.name}</h4>
+                          <p className="text-[11px] text-slate-400 font-mono">{u.email}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-2">
-                          <button
-                            onClick={() => handleApproveApplication(app.uid)}
-                            className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 shadow-md"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => handleRejectApplication(app.uid)}
-                            className="py-1.5 px-3 bg-slate-800 hover:bg-red-950 hover:text-red-400 text-slate-400 text-[11px] font-bold rounded-lg flex items-center justify-center gap-1"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                        </div>
+                        {/* Real-time Role Selector */}
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
+                          className="bg-slate-900 text-white font-mono font-bold text-xs px-3 py-1.5 rounded-xl border border-slate-700 focus:border-red-500 focus:outline-none"
+                        >
+                          <option value="citizen">citizen</option>
+                          <option value="rescue_admin">rescue_admin</option>
+                          <option value="global_admin">global_admin</option>
+                        </select>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Real-time SOS Incident Purge Directory */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-white flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <span>Real-Time Firestore SOS Signals (Global Purge Console)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Purge fake or spam emergency requests from Cloud Firestore with 1 click
+                </p>
+              </div>
+
+              <span className="px-3 py-1 bg-red-950 text-red-400 border border-red-800 text-xs font-bold rounded-full">
+                {allSOS.length} ACTIVE DOCUMENTS
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allSOS.map((sos) => (
+                <div key={sos.requestId} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-black text-white">{sos.citizenName}</h4>
+                      <p className="text-[11px] font-mono text-slate-400">{sos.requestId}</p>
+                    </div>
+                    <span className="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 text-[10px] font-mono font-bold rounded">
+                      {sos.priority}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 line-clamp-2">{sos.description}</p>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-900 text-xs">
+                    <span className="text-slate-400 font-mono">Status: {sos.status}</span>
+                    <button
+                      onClick={() => handleDeleteFakeSOS(sos.requestId)}
+                      className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 shadow-md"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Purge Spam</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </main>

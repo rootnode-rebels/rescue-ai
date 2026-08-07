@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCH4VkH-o4FW90DRm8Gb73CPm_epccPEXs",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "rescue-ai-1.firebaseapp.com",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "rescue-ai-1",

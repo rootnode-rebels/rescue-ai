@@ -7,14 +7,18 @@ import {
   updateProfile,
   setPersistence,
   browserLocalPersistence,
+  getAuth,
 } from "firebase/auth";
 import {
+  collection,
   doc,
   getDoc,
   setDoc,
   updateDoc,
+  onSnapshot,
 } from "firebase/firestore";
-import { auth, db, googleProvider } from "@/lib/firebase";
+import { initializeApp } from "firebase/app";
+import { auth, db, googleProvider, firebaseConfig } from "@/lib/firebase";
 import { RegisterFormData, LoginFormData, UserProfile, UserRole } from "@/types/auth";
 
 const USERS_COLLECTION = "users";
@@ -98,7 +102,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 /**
  * Registers a new Citizen account.
  * Public users ALWAYS get role = "citizen".
- * Users can NEVER register themselves as rescue_admin or global_admin.
  */
 export async function registerWithEmail(data: RegisterFormData): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -108,7 +111,6 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
   await updateProfile(user, { displayName: data.name });
 
   const now = new Date().toISOString();
-  // Public registration is ALWAYS citizen
   const assignedRole: UserRole = "citizen";
 
   const newProfile: UserProfile = {
@@ -149,7 +151,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
   let profile = await getUserProfile(user.uid);
 
   if (profile) {
-    // Update lastLogin timestamp without mutating the role
     try {
       await updateDoc(doc(db, USERS_COLLECTION, user.uid), {
         lastLogin: now,
@@ -159,7 +160,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
     }
     profile.lastLogin = now;
   } else {
-    // Initial document creation if missing in Firestore
     const isSuperAdmin = isSuperAdminEmail(data.email);
     const initialRole: UserRole = isSuperAdmin ? "global_admin" : "citizen";
 
@@ -190,7 +190,6 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 
 /**
  * Signs in or registers user via Google Authentication.
- * Reads existing profile from Firestore users/{uid} document.
  */
 export async function loginWithGoogle(): Promise<UserProfile> {
   await setPersistence(auth, browserLocalPersistence);
@@ -238,34 +237,79 @@ export async function loginWithGoogle(): Promise<UserProfile> {
 }
 
 /**
- * Provisions a Rescue Admin account.
- * Allowed ONLY by Global Admin from /admin console.
+ * Provisions a new user account (Citizen, Rescue Admin, Global Admin) by Super Admin.
+ * Uses a secondary Firebase App instance so Super Admin stays signed in.
  */
-export async function provisionRescueAdminProfile(
-  uid: string,
-  name: string,
-  email: string,
-  phone: string,
-  organization: string,
-  badgeNumber: string
-): Promise<UserProfile> {
+export async function provisionUserAccountBySuperAdmin(data: {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: UserRole;
+  organization?: string;
+  badgeNumber?: string;
+}): Promise<UserProfile> {
+  const tempAppName = "SecondaryAdminApp_" + Date.now();
+  const secondaryApp = initializeApp(firebaseConfig, tempAppName);
+  const secondaryAuth = getAuth(secondaryApp);
+
+  const credential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
+  const user = credential.user;
+
   const now = new Date().toISOString();
-  const profile: UserProfile = {
-    uid,
-    name,
-    email,
-    phone,
-    role: "rescue_admin",
-    organization,
-    badgeNumber,
+  const newProfile: UserProfile = {
+    uid: user.uid,
+    name: data.name,
+    email: data.email,
+    phone: data.phone || "",
+    role: data.role,
+    organization: data.organization || "",
+    badgeNumber: data.badgeNumber || "",
     photoURL: null,
     createdAt: now,
     lastLogin: now,
     status: "active",
   };
 
-  await setDoc(doc(db, USERS_COLLECTION, uid), profile);
-  return profile;
+  await setDoc(doc(db, USERS_COLLECTION, user.uid), newProfile);
+  await signOut(secondaryAuth);
+
+  return newProfile;
+}
+
+/**
+ * Subscribes to all user accounts in Cloud Firestore in real time.
+ */
+export function subscribeAllUsers(callback: (users: UserProfile[]) => void): () => void {
+  try {
+    const usersRef = collection(db, USERS_COLLECTION);
+    return onSnapshot(
+      usersRef,
+      (snapshot) => {
+        const list: UserProfile[] = [];
+        snapshot.forEach((docSnap) => {
+          if (docSnap.exists()) {
+            list.push(docSnap.data() as UserProfile);
+          }
+        });
+        callback(list);
+      },
+      (error) => {
+        console.warn("Real-time users snapshot error:", error);
+      }
+    );
+  } catch (err) {
+    console.warn("Could not setup users snapshot listener:", err);
+    return () => {};
+  }
+}
+
+/**
+ * Updates a user's assigned role in Cloud Firestore in real time.
+ */
+export async function updateUserRoleInFirestore(uid: string, newRole: UserRole): Promise<void> {
+  const docRef = doc(db, USERS_COLLECTION, uid);
+  await updateDoc(docRef, { role: newRole, status: "active" });
 }
 
 /**
