@@ -15,7 +15,8 @@ interface EmergencySOSModalProps {
 export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, onClose }) => {
   const { userProfile } = useAuth();
   const [status, setStatus] = useState<"idle" | "locating" | "broadcasting" | "sent">("idle");
-  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: 37.7749, lng: -122.4194 });
+  // Calibrated Default Coordinates (India Grid)
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 });
   const [sosId, setSosId] = useState<string>("");
 
   const triggerSOS = async () => {
@@ -35,7 +36,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
         currentLng = pos.coords.longitude;
         setCoords({ lat: currentLat, lng: currentLng });
       } catch (e) {
-        console.warn("GPS fallback used:", e);
+        console.warn("GPS fallback used (India Emergency Grid):", e);
       }
     }
 
@@ -48,14 +49,14 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
       requestId: reqId,
       uid: userProfile?.uid || "citizen-anon",
       citizenName: userProfile?.name || "Citizen In Distress",
-      userPhone: userProfile?.phone || "+1 (555) 000-0000",
+      userPhone: userProfile?.phone || "+91 98765 43210",
       category: "CRITICAL EMERGENCY",
       description: "Direct SOS Alert broadcasted from Citizen Emergency Dashboard.",
       priority: "CRITICAL",
       status: "Pending",
       latitude: currentLat,
       longitude: currentLng,
-      address: `GPS Locked: ${currentLat.toFixed(4)}° N, ${currentLng.toFixed(4)}° W`,
+      address: `GPS Locked: ${currentLat.toFixed(4)}° N, ${currentLng.toFixed(4)}° E`,
       peopleCount: 1,
       medicalNeeds: true,
       createdAt: new Date().toISOString(),
@@ -63,7 +64,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
       isOfflineCreated: !navigator.onLine,
     };
 
-    // Write to Firestore immediately (<50ms)! Streams simultaneously to Rescue & Admin Dashboards!
+    // Dual write to Firestore collections (sos_requests & sos) in <50ms!
     await createSOSRequestInFirestore(newRecord);
 
     setTimeout(() => {
@@ -95,7 +96,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
               </div>
               <div>
                 <h3 className="font-extrabold text-lg leading-tight">Emergency SOS Signal</h3>
-                <p className="text-xs text-red-100 font-medium">Instant AI Triage & Direct Rescue Command Broadcast</p>
+                <p className="text-xs text-red-100 font-medium">Instant AI Triage &amp; Direct Rescue Command Broadcast</p>
               </div>
             </div>
             <button
@@ -129,7 +130,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                   </div>
                   <div className="flex items-center gap-2 font-semibold text-slate-800">
                     <ShieldCheck className="w-4 h-4 text-blue-600" />
-                    <span>Automated Firestore Realtime Queue Broadcast</span>
+                    <span>Automated Firestore Dual-Queue Broadcast</span>
                   </div>
                 </div>
 
@@ -179,7 +180,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                   </span>
                   <h4 className="text-xl font-extrabold text-slate-900">Emergency Distress Signal Broadcasted!</h4>
                   <p className="text-xs text-slate-600 max-w-sm mx-auto">
-                    Your location ({coords.lat.toFixed(4)}° N, {coords.lng.toFixed(4)}° W) has been logged into Cloud Firestore. Rescue teams have received your alert.
+                    Your location ({coords.lat.toFixed(4)}° N, {coords.lng.toFixed(4)}° E) has been logged into Cloud Firestore. Rescue teams have received your alert.
                   </p>
                 </div>
 
@@ -194,7 +195,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                   </div>
                   <div className="flex justify-between text-slate-400">
                     <span>STREAM MODE:</span>
-                    <span className="text-emerald-400 font-bold">SIMULTANEOUS FIRESTORE ON-SNAPSHOT</span>
+                    <span className="text-emerald-400 font-bold">DUAL FIRESTORE QUEUE ON-SNAPSHOT</span>
                   </div>
                 </div>
 
