@@ -27,7 +27,7 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "SOS & Help", href: "/dashboard/sos", icon: Flame },
-    { name: "AI Assistant", href: "#ai-assistant", icon: Bot },
+    { name: "AI Assistant", href: "/dashboard/ai-assistant", icon: Bot },
     { name: "Nearby Shelters", href: "#shelters", icon: MapPin },
     { name: "My Requests", href: "#my-requests", icon: FileText },
     { name: "Emergency Guide", href: "#guide", icon: BookOpen },
