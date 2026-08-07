@@ -1,4 +1,4 @@
-export type UserRole = 'citizen' | 'rescue' | 'authority' | 'hospital' | 'ngo';
+export type UserRole = 'citizen' | 'rescue_admin' | 'global_admin' | 'rescue' | 'authority' | 'hospital' | 'ngo';
 
 export interface UserProfile {
   uid: string;
@@ -14,7 +14,7 @@ export interface UserProfile {
 
 export type PriorityLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
-export type SOSStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type SOSStatus = 'Pending' | 'Accepted' | 'Team On The Way' | 'Reached' | 'Completed' | 'Rejected' | 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'CANCELLED';
 
 export type EmergencyCategory = 
   | 'FLOOD' 
@@ -22,8 +22,10 @@ export type EmergencyCategory =
   | 'FIRE' 
   | 'LANDSLIDE' 
   | 'MEDICAL' 
-  | 'TRapped'
+  | 'TRAPPED'
   | 'OTHER';
+
+export type SOSCategory = EmergencyCategory;
 
 export interface GeoLocation {
   latitude: number;
