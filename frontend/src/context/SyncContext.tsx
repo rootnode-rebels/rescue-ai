@@ -37,7 +37,7 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setSyncStatus((prev) => ({ ...prev, isSyncing: true, error: null }));
 
-      const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000/api";
+      const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "https://rescueai-backend-3u2o.onrender.com/api";
 
       const response = await fetch(`${backendUrl}/sos/sync`, {
         method: "POST",
