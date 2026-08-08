@@ -11,6 +11,7 @@ import { RequestCard } from "./RequestCard";
 import { AlertCard } from "./AlertCard";
 import { ShelterCard } from "./ShelterCard";
 import { EmergencyGuideTab } from "./EmergencyGuideTab";
+import { CitizenSOSTrackerWithNotifications } from "./CitizenSOSTrackerWithNotifications";
 import { ProfileSettingsTab } from "./ProfileSettingsTab";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -60,6 +61,9 @@ export const DashboardLayout: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {/* Citizen Live Push Notification & Incident Tracker */}
+          <CitizenSOSTrackerWithNotifications />
 
           {/* Conditional View Rendering based on activeView */}
           {activeView === "dashboard" && (

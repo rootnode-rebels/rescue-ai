@@ -11,8 +11,33 @@ export const HardwarePowerButtonListener: React.FC = () => {
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastPressTimeRef = useRef<number>(0);
 
+  // Strictly evaluate if the current environment is a Mobile Phone (Capacitor Android APK or Mobile Web)
+  const isMobileDevice = (): boolean => {
+    if (typeof window === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const isCapacitorNative = Boolean((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.());
+    const isSmallTouchScreen = "ontouchstart" in window && window.innerWidth <= 800;
+
+    return isMobileUA || isCapacitorNative || isSmallTouchScreen;
+  };
+
   useEffect(() => {
-    const handleHardwarePress = () => {
+    // DO NOT listen on Laptop/Desktop/PC environments!
+    if (!isMobileDevice()) return;
+
+    const handleHardwarePress = (e: KeyboardEvent) => {
+      // Listen for Mobile Volume / Power key events
+      const isMobileHardwareKey =
+        e.key === "Power" ||
+        e.key === "VolumeDown" ||
+        e.key === "VolumeUp" ||
+        e.code === "Power" ||
+        e.code === "VolumeDown" ||
+        e.code === "VolumeUp";
+
+      if (!isMobileHardwareKey) return;
+
       const now = Date.now();
       const timeSinceLastPress = now - lastPressTimeRef.current;
       lastPressTimeRef.current = now;
@@ -46,15 +71,14 @@ export const HardwarePowerButtonListener: React.FC = () => {
   const triggerHardwareSOS = async () => {
     setShowEmergencyOverlay(true);
 
-    // Fetch live satellite location & dispatch emergency report
     try {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
             await createSOSRequestInFirestore({
-              category: "TRIPLE POWER BUTTON HARDWARE DISPATCH",
-              description: "🚨 EMERGENCY DISPATCH TRIGGERED VIA TRIPLE HARDWARE POWER BUTTON PRESS!",
+              category: "MOBILE HARDWARE SOS",
+              description: "🚨 MOBILE HARDWARE TRIPLE POWER BUTTON EMERGENCY SOS DISPATCH!",
               priority: "CRITICAL",
               latitude,
               longitude,
@@ -63,10 +87,9 @@ export const HardwarePowerButtonListener: React.FC = () => {
             });
           },
           async () => {
-            // Default GPS fallback
             await createSOSRequestInFirestore({
-              category: "TRIPLE POWER BUTTON HARDWARE DISPATCH",
-              description: "🚨 EMERGENCY DISPATCH TRIGGERED VIA TRIPLE HARDWARE POWER BUTTON PRESS!",
+              category: "MOBILE HARDWARE SOS",
+              description: "🚨 MOBILE HARDWARE TRIPLE POWER BUTTON EMERGENCY SOS DISPATCH!",
               priority: "CRITICAL",
               latitude: 12.9716,
               longitude: 77.5946,
@@ -78,9 +101,13 @@ export const HardwarePowerButtonListener: React.FC = () => {
         );
       }
     } catch (e) {
-      console.warn("Hardware SOS dispatch notice:", e);
+      console.warn("Mobile Hardware SOS dispatch notice:", e);
     }
   };
+
+  if (typeof window !== "undefined" && !isMobileDevice()) {
+    return null; // Render absolutely nothing on PCs / Laptops
+  }
 
   return (
     <AnimatePresence>
@@ -97,20 +124,20 @@ export const HardwarePowerButtonListener: React.FC = () => {
 
           <div className="inline-flex items-center gap-2 bg-red-600/30 border border-red-500/50 px-4 py-2 rounded-full text-xs font-black tracking-widest uppercase mb-4 text-red-300">
             <Radio className="w-4 h-4 animate-pulse text-red-400" />
-            <span>Hardware Triple Press Triggered</span>
+            <span>Mobile Hardware SOS Triggered</span>
           </div>
 
           <h2 className="text-3xl sm:text-5xl font-black uppercase tracking-tight text-white mb-4">
             Emergency SOS Dispatched!
           </h2>
           <p className="text-sm sm:text-base text-red-200 max-w-md mx-auto font-medium mb-8">
-            3x Power Button Press detected! Your live GPS coordinates have been broadcasted to NDRF Rescue Command.
+            3x Power/Volume Button Press detected on your Mobile Phone! Your live GPS coordinates have been sent to NDRF Rescue Command.
           </p>
 
           <div className="bg-black/40 border border-red-500/30 rounded-2xl p-4 max-w-sm w-full mb-8 text-left space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400 font-medium">Trigger Source:</span>
-              <span className="text-red-400 font-bold">Hardware Power Button (3x)</span>
+              <span className="text-gray-400 font-medium">Trigger Device:</span>
+              <span className="text-red-400 font-bold">Mobile Phone Hardware Key (3x)</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-400 font-medium">Priority Triage:</span>
@@ -135,7 +162,7 @@ export const HardwarePowerButtonListener: React.FC = () => {
       {triggerCount > 0 && !showEmergencyOverlay && (
         <div className="fixed bottom-6 right-6 z-[999] bg-red-600 text-white px-4 py-3 rounded-2xl shadow-2xl font-black text-xs flex items-center gap-3 border border-red-400 animate-bounce">
           <AlertTriangle className="w-5 h-5 text-yellow-300" />
-          <span>Power Button Press {triggerCount}/3 — Press {3 - triggerCount} more time to trigger SOS!</span>
+          <span>Mobile Key Press {triggerCount}/3 — Press {3 - triggerCount} more time for SOS!</span>
         </div>
       )}
     </AnimatePresence>

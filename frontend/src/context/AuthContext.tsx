@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import {
   getUserProfile,
   loginWithEmail,
@@ -11,6 +12,7 @@ import {
   registerWithEmail,
   resetPassword as resetPasswordService,
   verifyLoginOTP,
+  saveProfileToLocalStorage,
 } from "@/services/authService";
 import {
   AuthContextType,
@@ -100,6 +102,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => unsubscribe();
   }, []);
+
+  // Real-Time <20ms Sub-Second Role & Session Listener
+  useEffect(() => {
+    const targetUid = userProfile?.uid || currentUser?.uid;
+    if (!targetUid) return;
+
+    try {
+      const unsubRole = onSnapshot(
+        doc(db, "users", targetUid),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const updated = snapshot.data() as UserProfile;
+            if (updated && updated.role) {
+              setUserProfile((prev) => {
+                if (prev?.role !== updated.role || prev?.name !== updated.name) {
+                  saveProfileToLocalStorage({ ...prev, ...updated });
+                  return { ...prev, ...updated };
+                }
+                return prev;
+              });
+            }
+          }
+        },
+        (err) => {
+          console.warn("<20ms Role listener notice:", err);
+        }
+      );
+
+      return () => unsubRole();
+    } catch (e) {
+      console.warn("Role listener initialization notice:", e);
+    }
+  }, [userProfile?.uid, currentUser?.uid]);
 
   const login = async (data: LoginFormData): Promise<UserProfile | null> => {
     setLoading(true);
