@@ -4,9 +4,14 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Download, ShieldAlert, Smartphone, CheckCircle2, ArrowLeft, Radio, Globe } from "lucide-react";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => void;
+  userChoice: Promise<{ outcome: string }>;
+}
+
 export default function DownloadPage() {
   const [downloading, setDownloading] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
