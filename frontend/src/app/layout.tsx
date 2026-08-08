@@ -4,7 +4,6 @@ import { SyncProvider } from "@/context/SyncContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { OfflineSyncBanner } from "@/components/common/OfflineSyncBanner";
 import { PWARegister } from "@/components/common/PWARegister";
-import { HardwarePowerButtonListener } from "@/components/dashboard/HardwarePowerButtonListener";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -47,7 +46,6 @@ export default function RootLayout({
             <SyncProvider>
               <OfflineSyncBanner />
               <PWARegister />
-              <HardwarePowerButtonListener />
               {children}
             </SyncProvider>
           </ThemeProvider>
