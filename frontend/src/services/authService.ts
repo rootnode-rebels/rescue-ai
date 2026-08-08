@@ -21,14 +21,14 @@ const LOCAL_STORAGE_KEY = "rescueai_user_profile";
 const googleProvider = new GoogleAuthProvider();
 
 /**
- * Hardcoded Super Admin Credentials Bootstrap Rule:
- * Guarantees that superadmin@rescueai.org is ALWAYS assigned "global_admin" role,
- * and rescueadmin@rescueai.org is ALWAYS assigned "rescue_admin" role.
+ * Intelligent Super Admin & Rescue Command Role Bootstrap Rule:
+ * Guarantees that any email containing 'admin', 'super', 'eoc', 'rescue', 'ndrf', or 'squad'
+ * is automatically assigned their proper administrative role.
  */
 function getBootstrapRole(email: string): UserRole {
   const clean = email.trim().toLowerCase();
-  if (clean === "superadmin@rescueai.org") return "global_admin";
-  if (clean === "rescueadmin@rescueai.org") return "rescue_admin";
+  if (clean.includes("super") || clean.includes("admin") || clean.includes("eoc")) return "global_admin";
+  if (clean.includes("rescue") || clean.includes("ndrf") || clean.includes("squad") || clean.includes("coastguard")) return "rescue_admin";
   return "citizen";
 }
 
@@ -41,14 +41,16 @@ function createFallbackProfile(email: string, name?: string, phone?: string): Us
   const now = new Date().toISOString();
   const uid = "user-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_");
 
+  const displayName = name || (cleanEmail.split("@")[0] ? cleanEmail.split("@")[0].toUpperCase() : "RescueAI User");
+
   return {
     uid,
-    name: name || (cleanEmail.split("@")[0] ? cleanEmail.split("@")[0].toUpperCase() : "RescueAI User"),
+    name: displayName,
     email: cleanEmail,
     phone: phone || "+91 98765 43210",
     role,
-    organization: role === "global_admin" ? "EOC National Super Admin Command" : role === "rescue_admin" ? "NDRF Emergency Rescue Command" : "",
-    badgeNumber: role === "global_admin" ? "SUPER-ADMIN-01" : role === "rescue_admin" ? "RESCUE-ADMIN-01" : "",
+    organization: role === "global_admin" ? "EOC National Super Admin Command" : role === "rescue_admin" ? "NDRF Emergency Rescue Command" : "Citizen Protection Portal",
+    badgeNumber: role === "global_admin" ? "SUPER-ADMIN-01" : role === "rescue_admin" ? "RESCUE-ADMIN-01" : "CITIZEN-01",
     photoURL: null,
     createdAt: now,
     lastLogin: now,

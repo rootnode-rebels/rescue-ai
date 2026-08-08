@@ -52,9 +52,9 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ mode }) 
     }
   }, [userProfile]);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (typeof window !== "undefined") {
-      const payload = {
+      const customPayload = {
         name,
         phone,
         bloodGroup,
@@ -64,7 +64,19 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ mode }) 
         contact2Name,
         contact2Phone,
       };
-      localStorage.setItem("rescueai_user_custom_profile", JSON.stringify(payload));
+      localStorage.setItem("rescueai_user_custom_profile", JSON.stringify(customPayload));
+
+      // Update primary user profile in localStorage
+      const existing = localStorage.getItem("rescueai_user_profile");
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing);
+          parsed.name = name;
+          parsed.phone = phone;
+          localStorage.setItem("rescueai_user_profile", JSON.stringify(parsed));
+        } catch (e) {}
+      }
+
       setSavedProfileNotice(true);
       setTimeout(() => setSavedProfileNotice(false), 2500);
     }
