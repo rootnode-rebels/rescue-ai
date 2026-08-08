@@ -179,15 +179,14 @@ export async function createSOSRequestInFirestore(
   // Always save to local cache first (Instant Sub-1ms UI response)
   saveRecordToLocalCache(fullRecord);
 
-  try {
-    if (navigator.onLine) {
-      await Promise.all([
-        setDoc(doc(db, SOS_COLLECTION_1, requestId), fullRecord),
-        setDoc(doc(db, SOS_COLLECTION_2, requestId), fullRecord),
-      ]);
-    }
-  } catch (err) {
-    console.warn("Firestore dual write notice (Saved Offline):", err);
+  // Asynchronously dispatch to Firestore collections in background without blocking UI
+  if (typeof window !== "undefined" && navigator.onLine) {
+    Promise.all([
+      setDoc(doc(db, SOS_COLLECTION_1, requestId), fullRecord),
+      setDoc(doc(db, SOS_COLLECTION_2, requestId), fullRecord),
+    ]).catch((err) => {
+      console.warn("Firestore dual write notice (Saved Offline):", err);
+    });
   }
 
   return fullRecord;

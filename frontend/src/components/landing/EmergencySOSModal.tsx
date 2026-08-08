@@ -43,9 +43,9 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
       try {
         const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
+            enableHighAccuracy: false,
+            timeout: 1200,
+            maximumAge: 10000,
           });
         });
         currentLat = pos.coords.latitude;
@@ -53,7 +53,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
         currentAccuracy = pos.coords.accuracy || 2.5;
         setCoords({ lat: currentLat, lng: currentLng, accuracy: currentAccuracy });
       } catch (e) {
-        console.warn("GPS fallback used:", e);
+        console.warn("Fast GPS fallback used:", e);
       }
     }
 
