@@ -15,6 +15,8 @@ import {
   User,
   Settings,
   LogOut,
+  Radio,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -42,63 +44,129 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
   const isRescueUser = userProfile?.role === "rescue_admin" || userProfile?.role === "rescue";
   const isAdminUser = userProfile?.role === "global_admin";
 
-  const navigationItems = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      href: isRescueUser ? "/rescue-dashboard" : isAdminUser ? "/admin" : "/dashboard",
-    },
-    {
-      id: "sos",
-      label: "Emergency SOS",
-      icon: Flame,
-      href: "/sos",
-      badge: "LIVE",
-    },
-    {
-      id: "ai-assistant",
-      label: "AI Assistant",
-      icon: Bot,
-      href: "/ai-assistant",
-    },
-    {
-      id: "my-requests",
-      label: "My Requests",
-      icon: FileText,
-      href: "/dashboard#my-requests",
-    },
-    {
-      id: "shelters",
-      label: "Shelters",
-      icon: Building,
-      href: "/dashboard#shelters",
-    },
-    {
-      id: "alerts",
-      label: "Live Alerts",
-      icon: Bell,
-      href: "/dashboard#alerts",
-    },
-    {
-      id: "guide",
-      label: "Emergency Guide",
-      icon: BookOpen,
-      href: "/dashboard#guide",
-    },
-    {
-      id: "profile",
-      label: "Profile",
-      icon: User,
-      href: "/dashboard#profile",
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      href: "/dashboard#settings",
-    },
-  ];
+  // Strict Role-Based Menu Filtering
+  const getRoleBasedItems = () => {
+    if (isRescueUser) {
+      return [
+        {
+          id: "rescue-dashboard",
+          label: "Tactical Command Grid",
+          icon: Radio,
+          href: "/rescue-dashboard",
+          badge: "OPERATIONAL",
+        },
+        {
+          id: "my-requests",
+          label: "Active Dispatches",
+          icon: FileText,
+          href: "/rescue-dashboard#dispatches",
+        },
+        {
+          id: "profile",
+          label: "Rescue Unit Profile",
+          icon: User,
+          href: "/rescue-dashboard#profile",
+        },
+        {
+          id: "settings",
+          label: "Console Settings",
+          icon: Settings,
+          href: "/rescue-dashboard#settings",
+        },
+      ];
+    }
+
+    if (isAdminUser) {
+      return [
+        {
+          id: "admin",
+          label: "EOC Super Admin",
+          icon: Shield,
+          href: "/admin",
+          badge: "SUPER ADMIN",
+        },
+        {
+          id: "alerts",
+          label: "National Alerts",
+          icon: Bell,
+          href: "/admin#alerts",
+        },
+        {
+          id: "rescue-dashboard",
+          label: "NDRF Operations",
+          icon: Radio,
+          href: "/rescue-dashboard",
+        },
+        {
+          id: "profile",
+          label: "Admin Profile",
+          icon: User,
+          href: "/admin#profile",
+        },
+      ];
+    }
+
+    // Default: Citizen Role
+    return [
+      {
+        id: "dashboard",
+        label: "Citizen Dashboard",
+        icon: LayoutDashboard,
+        href: "/dashboard",
+      },
+      {
+        id: "sos",
+        label: "Emergency SOS",
+        icon: Flame,
+        href: "/sos",
+        badge: "LIVE",
+      },
+      {
+        id: "ai-assistant",
+        label: "AI Survival Assistant",
+        icon: Bot,
+        href: "/ai-assistant",
+      },
+      {
+        id: "my-requests",
+        label: "My SOS History",
+        icon: FileText,
+        href: "/dashboard#my-requests",
+      },
+      {
+        id: "shelters",
+        label: "Relief Shelters",
+        icon: Building,
+        href: "/dashboard#shelters",
+      },
+      {
+        id: "alerts",
+        label: "Live Emergency Alerts",
+        icon: Bell,
+        href: "/dashboard#alerts",
+      },
+      {
+        id: "guide",
+        label: "Emergency Guide",
+        icon: BookOpen,
+        href: "/dashboard#guide",
+      },
+      {
+        id: "profile",
+        label: "My Profile",
+        icon: User,
+        href: "/dashboard#profile",
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        icon: Settings,
+        href: "/dashboard#settings",
+      },
+    ];
+  };
+
+  const navigationItems = getRoleBasedItems();
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col h-screen sticky top-0 shrink-0 z-30 font-sans">
@@ -112,9 +180,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
             Rescue<span className="text-red-500">AI</span>
           </h1>
           <p className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-wider">
-            {userProfile?.role === "global_admin"
+            {isAdminUser
               ? "Super Admin EOC"
-              : userProfile?.role === "rescue_admin"
+              : isRescueUser
               ? "NDRF Command"
               : "Citizen Portal"}
           </p>
@@ -165,7 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
           </div>
           <div className="truncate">
             <p className="text-xs font-bold text-white truncate">{userProfile?.name || "Citizen"}</p>
-            <p className="text-[10px] text-slate-400 truncate">{userProfile?.email}</p>
+            <p className="text-[10px] text-slate-400 truncate font-mono uppercase">{userProfile?.role || "citizen"}</p>
           </div>
         </div>
         <button

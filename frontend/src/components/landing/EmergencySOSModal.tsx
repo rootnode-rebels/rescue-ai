@@ -5,7 +5,7 @@ import { AlertTriangle, CheckCircle2, ShieldCheck, X, Radio, Compass, Lock, Exte
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { createSOSRequestInFirestore, updateSOSLocationInFirestore, getGoogleMapsUrl } from "@/services/sosService";
-import { SOSFirestoreRequest } from "@/types/auth";
+import { SOSFirestoreRequest, SOSPriority } from "@/types/auth";
 
 interface EmergencySOSModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface EmergencySOSModalProps {
 export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, onClose }) => {
   const { userProfile } = useAuth();
   const [status, setStatus] = useState<"idle" | "consent" | "locating" | "broadcasting" | "sent">("consent");
+  const [selectedPriority, setSelectedPriority] = useState<SOSPriority>("CRITICAL");
   const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy: number }>({
     lat: 12.9716,
     lng: 77.5946,
@@ -61,14 +62,16 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
     const reqId = "sos-" + Date.now();
     setSosId(reqId);
 
+    const isCurrentlyOffline = typeof window !== "undefined" && !navigator.onLine;
+
     const newRecord: SOSFirestoreRequest = {
       requestId: reqId,
       uid: userProfile?.uid || "citizen-anon",
       citizenName: userProfile?.name || "Citizen In Distress",
       userPhone: userProfile?.phone || "+91 98765 43210",
-      category: "CRITICAL EMERGENCY",
-      description: "Direct SOS Alert broadcasted with 99.99% Pinpoint Live GPS Telemetry.",
-      priority: "CRITICAL",
+      category: selectedPriority === "CRITICAL" ? "CRITICAL LIFE THREAT" : selectedPriority === "HIGH" ? "SEVERE INJURY" : "MEDICAL ASSIST",
+      description: `SOS Alert [Priority: ${selectedPriority}] broadcasted with 99.99% Pinpoint Live GPS Telemetry.`,
+      priority: selectedPriority,
       status: "Pending",
       latitude: currentLat,
       longitude: currentLng,
@@ -77,7 +80,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
       medicalNeeds: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      isOfflineCreated: !navigator.onLine,
+      isOfflineCreated: isCurrentlyOffline,
     };
 
     // Dual write to Firestore collections (sos_requests & sos) in <20ms!
@@ -146,7 +149,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
 
           {/* Modal Content Area */}
           <div className="p-6 space-y-6">
-            {/* Step 1: Location Access Consent Prompt */}
+            {/* Step 1: Location Access Consent Prompt & Priority Selector */}
             {status === "consent" && (
               <div className="space-y-5 text-center py-2">
                 <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mx-auto border border-red-100 shadow-sm">
@@ -155,14 +158,43 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                 <div className="space-y-2">
                   <h4 className="text-xl font-black text-slate-900">Mandatory 99.99% GPS Telemetry Consent</h4>
                   <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto leading-relaxed">
-                    RescueAI requires high-precision GPS access (±2.5m precision) to dispatch rescue squads directly to your exact Google Maps location.
+                    Select your emergency priority level and grant GPS access (±2.5m precision) to dispatch rescue squads directly to your location.
                   </p>
+                </div>
+
+                {/* Priority Selector Matrix */}
+                <div className="space-y-2 text-left bg-slate-50 border border-slate-200 p-3 rounded-2xl">
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Select Emergency Priority Level:
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as SOSPriority[]).map((prio) => (
+                      <button
+                        key={prio}
+                        type="button"
+                        onClick={() => setSelectedPriority(prio)}
+                        className={`py-2 px-1 rounded-xl text-xs font-black transition-all ${
+                          selectedPriority === prio
+                            ? prio === "CRITICAL"
+                              ? "bg-red-600 text-white shadow-md shadow-red-950"
+                              : prio === "HIGH"
+                              ? "bg-amber-600 text-white shadow-md"
+                              : prio === "MEDIUM"
+                              ? "bg-blue-600 text-white shadow-md"
+                              : "bg-slate-700 text-white"
+                            : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {prio}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-left flex items-start gap-2.5">
                   <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] font-semibold text-amber-800 leading-snug">
-                    Your exact coordinates will stream to Rescue Command in real time (&lt;20ms latency) with a direct Google Maps vector link.
+                    If offline, your SOS &amp; exact current GPS location will auto-sync to NDRF Rescue Command the moment your device reconnects online!
                   </p>
                 </div>
 
@@ -178,7 +210,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                     className="flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-1.5 uppercase"
                   >
                     <Radio className="w-4 h-4 text-white animate-ping" />
-                    <span>Grant Consent &amp; SOS</span>
+                    <span>Grant Consent &amp; SOS ({selectedPriority})</span>
                   </button>
                 </div>
               </div>
@@ -199,7 +231,7 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                     {status === "locating" ? "Locking 99.99% Accurate GPS..." : "Broadcasting Emergency Signal..."}
                   </h4>
                   <p className="text-xs text-slate-500 font-medium">
-                    Telemetry locked at {coords.lat.toFixed(4)}° N, {coords.lng.toFixed(4)}° E (±{coords.accuracy.toFixed(1)}m precision)
+                    Priority: <strong className="text-red-600 font-extrabold">{selectedPriority}</strong> • Telemetry locked at {coords.lat.toFixed(4)}° N, {coords.lng.toFixed(4)}° E (±{coords.accuracy.toFixed(1)}m precision)
                   </p>
                 </div>
               </div>
@@ -220,6 +252,11 @@ export const EmergencySOSModal: React.FC<EmergencySOSModalProps> = ({ isOpen, on
                   <div className="flex justify-between border-b border-slate-200/80 pb-2">
                     <span className="text-slate-500">Incident Code:</span>
                     <span className="font-extrabold text-slate-900">{sosId}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b border-slate-200/80 pb-2">
+                    <span className="text-slate-500">Selected Priority:</span>
+                    <span className="font-extrabold text-red-600">{selectedPriority}</span>
                   </div>
 
                   {/* DIRECT CLICKABLE GOOGLE MAPS LINK */}
