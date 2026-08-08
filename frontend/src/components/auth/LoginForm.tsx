@@ -24,7 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoginFormData } from "@/types/auth";
 import { getRoleDashboard } from "./ProtectedRoute";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
-import { sendLoginOTP, verifyLoginOTP } from "@/services/authService";
+import { sendLoginOTP } from "@/services/authService";
 
 export const LoginForm: React.FC = () => {
   const { login, loginWithGoogle, loginWithOTP } = useAuth();

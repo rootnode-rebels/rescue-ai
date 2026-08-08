@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { Mail, CheckCircle2, ShieldAlert, X, ArrowRight, Key, Lock, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendLoginOTP, createFallbackProfile, saveProfileToLocalStorage } from "@/services/authService";
