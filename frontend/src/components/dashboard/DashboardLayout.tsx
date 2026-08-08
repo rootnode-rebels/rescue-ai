@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Smartphone, Download } from "lucide-react";
 import { Sidebar, DashboardViewMode } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
 import { StatsCard } from "./StatsCard";
@@ -64,6 +65,34 @@ export const DashboardLayout: React.FC = () => {
 
           {/* Citizen Live Push Notification & Incident Tracker */}
           <CitizenSOSTrackerWithNotifications />
+
+          {/* Mandatory Mobile App Download Requirement Banner for Citizens */}
+          <div className="bg-gradient-to-r from-red-900 via-red-800 to-slate-900 border border-red-500/50 rounded-3xl p-5 shadow-2xl text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-red-950 animate-bounce">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-red-500/30 border border-red-400/40 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest text-red-200 mb-1">
+                  <span>Compulsory Requirement</span>
+                </div>
+                <h4 className="font-black text-sm text-white uppercase tracking-tight">
+                  Mobile App Installation Required For Citizens
+                </h4>
+                <p className="text-xs text-red-100 font-medium">
+                  Install the 15.26 MB RescueAI Mobile App APK on your mobile phone for offline emergency dispatch and satellite GPS lock.
+                </p>
+              </div>
+            </div>
+
+            <a
+              href="/download"
+              className="px-6 py-3 bg-white text-red-950 hover:bg-slate-100 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all whitespace-nowrap shrink-0 flex items-center gap-2 active:scale-95"
+            >
+              <Download className="w-4 h-4 text-red-600" />
+              <span>Download 15.26 MB APK</span>
+            </a>
+          </div>
 
           {/* Conditional View Rendering based on activeView */}
           {activeView === "dashboard" && (

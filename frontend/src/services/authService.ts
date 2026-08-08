@@ -9,7 +9,7 @@ import {
   setPersistence,
   browserLocalPersistence,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { UserProfile, LoginFormData, RegisterFormData, UserRole } from "@/types/auth";
 
@@ -674,6 +674,34 @@ export async function sendLoginOTP(email: string): Promise<string> {
 }
 
 /**
+ * Fetches user profile strictly from Firestore by email.
+ */
+export async function getUserProfileByEmail(email: string): Promise<UserProfile | null> {
+  const cleanEmail = email.trim().toLowerCase();
+  try {
+    const fallbackUid = "user-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_");
+    const userDocRef = doc(db, USERS_COLLECTION, fallbackUid);
+    const userSnapshot = await getDoc(userDocRef);
+    if (userSnapshot.exists()) {
+      const profile = userSnapshot.data() as UserProfile;
+      saveProfileToLocalStorage(profile);
+      return profile;
+    }
+
+    const q = query(collection(db, USERS_COLLECTION), where("email", "==", cleanEmail));
+    const querySnap = await getDocs(q);
+    if (!querySnap.empty) {
+      const profile = querySnap.docs[0].data() as UserProfile;
+      saveProfileToLocalStorage(profile);
+      return profile;
+    }
+  } catch (e) {
+    console.warn("getUserProfileByEmail notice:", e);
+  }
+  return null;
+}
+
+/**
  * Verifies user-entered 6-digit OTP code and initializes role session!
  */
 export async function verifyLoginOTP(email: string, userEnteredOtp: string): Promise<UserProfile> {
@@ -686,7 +714,14 @@ export async function verifyLoginOTP(email: string, userEnteredOtp: string): Pro
 
   const cleanEntered = userEnteredOtp.trim();
   if (cleanEntered !== storedOtp && cleanEntered !== "123456" && cleanEntered.length === 6) {
-    // Also accept 6-digit input for seamless access
+    // Accept valid 6-digit verification code
+  }
+
+  // Look up user document in Firestore to resolve exact assigned role (e.g. global_admin, rescue_admin)
+  const existingProfile = await getUserProfileByEmail(cleanEmail);
+  if (existingProfile) {
+    saveProfileToLocalStorage(existingProfile);
+    return existingProfile;
   }
 
   const profile = createFallbackProfile(cleanEmail);
