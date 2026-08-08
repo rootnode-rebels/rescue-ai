@@ -537,7 +537,7 @@ export async function provisionUserAccountBySuperAdmin(data: {
   role: UserRole;
   organization?: string;
   badgeNumber?: string;
-}): Promise<{ profile: UserProfile; temporaryPassword: string }> {
+}): Promise<{ profile: UserProfile; temporaryPassword: string; tempPassword: string }> {
   const cleanEmail = data.email.trim().toLowerCase();
   const temporaryPassword = data.password || "Rescue@" + Math.floor(100000 + Math.random() * 900000);
   const now = new Date().toISOString();
@@ -578,7 +578,7 @@ export async function provisionUserAccountBySuperAdmin(data: {
     riskScore: "ADMIN_ACTION",
   });
 
-  return { profile, temporaryPassword };
+  return { profile, temporaryPassword, tempPassword: temporaryPassword };
 }
 
 /**
