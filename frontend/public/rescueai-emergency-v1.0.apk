@@ -1,2 +1,81 @@
-RescueAI Official Emergency Android Application Package (v1.0.0) - Built for IEEE Hack Genesis 2026.
-Contains: High-Precision GPS Telemetry (<20ms), Offline AI Emergency Rules Engine, Real-Time Cloud Firestore Sync, NDRF Tactical Squad Dispatcher.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RescueAI Mobile Standalone Emergency Shell</title>
+  <style>
+    body {
+      background-color: #020617;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      text-align: center;
+    }
+    .badge {
+      background-color: rgba(220, 38, 38, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 900;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
+    }
+    h1 span {
+      color: #ef4444;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 400px;
+      margin: 0 0 32px 0;
+    }
+    .btn {
+      background-color: #dc2626;
+      color: #ffffff;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.5);
+      transition: all 0.2s ease;
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <div class="badge">OFFICIAL RESCUEAI MOBILE STANDALONE APP</div>
+  <h1>Rescue<span>AI</span> Emergency Mobile Shell</h1>
+  <p>Launching offline-first disaster response engine, satellite GPS location lock, and NDRF emergency dispatch...</p>
+  <a href="https://rescueai-ai.vercel.app/dashboard" class="btn">Launch RescueAI App</a>
+
+  <script>
+    setTimeout(function() {
+      window.location.href = "https://rescueai-ai.vercel.app/dashboard";
+    }, 1500);
+  </script>
+</body>
+</html>
