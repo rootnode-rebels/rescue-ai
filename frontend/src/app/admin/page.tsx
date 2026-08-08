@@ -35,7 +35,7 @@ import {
 
 export default function AdminDashboardPage() {
   return (
-    <ProtectedRoute allowedRoles={["global_admin"]}>
+    <ProtectedRoute allowedRoles={["global_admin", "rescue_admin", "hospital", "authority"]}>
       <SuperAdminContent />
     </ProtectedRoute>
   );
@@ -202,11 +202,17 @@ function SuperAdminContent() {
   };
 
   const filteredUsers = allUsers.filter((user) => {
-    const matchesRole = filterRole === "ALL" || user.role === filterRole;
+    if (!user) return false;
+    const userRole = user.role || "citizen";
+    const userName = user.name || "Anonymous User";
+    const userEmail = user.email || "";
+    const userPhone = user.phone || "";
+
+    const matchesRole = filterRole === "ALL" || userRole === filterRole;
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.phone && user.phone.includes(searchQuery));
+      userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      userPhone.includes(searchQuery);
     return matchesRole && matchesSearch;
   });
 
