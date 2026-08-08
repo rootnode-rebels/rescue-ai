@@ -117,22 +117,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = snapshot.data() as UserProfile;
         if (data && data.role) {
           setUserProfile((prev) => {
-            if (prev && (prev.role !== data.role || prev.name !== data.name)) {
+            if (!prev) return data;
+            if (prev.role !== data.role || prev.name !== data.name) {
               const merged = { ...prev, ...data };
               saveProfileToLocalStorage(merged);
-
-              // Auto-navigate to appropriate role dashboard on live role change
-              if (typeof window !== "undefined") {
-                const targetPath =
-                  data.role === "global_admin"
-                    ? "/admin"
-                    : data.role === "rescue_admin"
-                    ? "/rescue-dashboard"
-                    : "/dashboard";
-                if (window.location.pathname !== targetPath) {
-                  window.location.href = targetPath;
-                }
-              }
               return merged;
             }
             return prev;
@@ -160,6 +148,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribers.forEach((unsub) => unsub());
     };
   }, [userProfile?.uid, userProfile?.email, currentUser?.uid]);
+
+  // Safe dashboard auto-redirection on live role change
+  useEffect(() => {
+    if (!userProfile?.role || typeof window === "undefined") return;
+    const path = window.location.pathname;
+    if (path === "/admin" || path === "/rescue-dashboard" || path === "/dashboard") {
+      const targetPath =
+        userProfile.role === "global_admin"
+          ? "/admin"
+          : userProfile.role === "rescue_admin"
+          ? "/rescue-dashboard"
+          : "/dashboard";
+      if (path !== targetPath) {
+        window.location.href = targetPath;
+      }
+    }
+  }, [userProfile?.role]);
 
   const login = async (data: LoginFormData): Promise<UserProfile | null> => {
     setLoading(true);
