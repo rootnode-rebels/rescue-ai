@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, DocumentSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import {
   getUserProfile,
@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const unsubscribers: (() => void)[] = [];
 
-    const handleRoleSnapshot = (snapshot: any) => {
+    const handleRoleSnapshot = (snapshot: DocumentSnapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data() as UserProfile;
         if (data && data.role) {
