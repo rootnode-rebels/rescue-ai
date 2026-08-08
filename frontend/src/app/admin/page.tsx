@@ -177,10 +177,14 @@ function SuperAdminContent() {
     }
   };
 
-  const handleRoleChange = async (uid: string, newRole: UserRole) => {
+  const handleRoleChange = async (targetUser: UserProfile, newRole: UserRole) => {
+    setAllUsers((prev) =>
+      prev.map((u) => (u.uid === targetUser.uid || u.email === targetUser.email ? { ...u, role: newRole } : u))
+    );
+
     try {
-      await updateUserRoleInFirestore(uid, newRole);
-      setSuccessMsg(`Role updated to "${newRole.toUpperCase()}"!`);
+      await updateUserRoleInFirestore(targetUser.uid, newRole, targetUser.email);
+      setSuccessMsg(`Role for "${targetUser.name}" (${targetUser.email}) updated live to "${newRole.toUpperCase()}"!`);
     } catch (err) {
       console.error("Error updating role:", err);
     }
@@ -453,7 +457,7 @@ function SuperAdminContent() {
                         <td className="py-3">
                           <select
                             value={u.role}
-                            onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
+                            onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
                             className="px-2.5 py-1 bg-slate-950 border border-slate-700 text-white rounded-lg text-xs font-bold focus:outline-none"
                           >
                             <option value="global_admin">GLOBAL ADMIN</option>

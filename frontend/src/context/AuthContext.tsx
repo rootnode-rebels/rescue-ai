@@ -103,39 +103,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  // Real-Time <20ms Sub-Second Role & Session Listener
+  // Real-Time Sub-Second Role & Session Listener
   useEffect(() => {
     const targetUid = userProfile?.uid || currentUser?.uid;
-    if (!targetUid) return;
+    const targetEmail = userProfile?.email?.toLowerCase().trim();
 
-    try {
-      const unsubRole = onSnapshot(
-        doc(db, "users", targetUid),
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const updated = snapshot.data() as UserProfile;
-            if (updated && updated.role) {
-              setUserProfile((prev) => {
-                if (prev && (prev.role !== updated.role || prev.name !== updated.name)) {
-                  const merged = { ...prev, ...updated };
-                  saveProfileToLocalStorage(merged);
-                  return merged;
+    if (!targetUid && !targetEmail) return;
+
+    const unsubscribers: (() => void)[] = [];
+
+    const handleRoleSnapshot = (snapshot: any) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as UserProfile;
+        if (data && data.role) {
+          setUserProfile((prev) => {
+            if (prev && (prev.role !== data.role || prev.name !== data.name)) {
+              const merged = { ...prev, ...data };
+              saveProfileToLocalStorage(merged);
+
+              // Auto-navigate to appropriate role dashboard on live role change
+              if (typeof window !== "undefined") {
+                const targetPath =
+                  data.role === "global_admin"
+                    ? "/admin"
+                    : data.role === "rescue_admin"
+                    ? "/rescue-dashboard"
+                    : "/dashboard";
+                if (window.location.pathname !== targetPath) {
+                  window.location.href = targetPath;
                 }
-                return prev;
-              });
+              }
+              return merged;
             }
-          }
-        },
-        (err) => {
-          console.warn("<20ms Role listener notice:", err);
+            return prev;
+          });
         }
-      );
+      }
+    };
 
-      return () => unsubRole();
-    } catch (e) {
-      console.warn("Role listener initialization notice:", e);
+    if (targetUid) {
+      try {
+        const u1 = onSnapshot(doc(db, "users", targetUid), handleRoleSnapshot, (err) => console.warn("UID role stream:", err));
+        unsubscribers.push(u1);
+      } catch (e) {}
     }
-  }, [userProfile?.uid, currentUser?.uid]);
+
+    if (targetEmail) {
+      try {
+        const cleanDocId = "user-" + targetEmail.replace(/[^a-zA-Z0-9]/g, "_");
+        const u2 = onSnapshot(doc(db, "users", cleanDocId), handleRoleSnapshot, (err) => console.warn("Email doc role stream:", err));
+        unsubscribers.push(u2);
+      } catch (e) {}
+    }
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [userProfile?.uid, userProfile?.email, currentUser?.uid]);
 
   const login = async (data: LoginFormData): Promise<UserProfile | null> => {
     setLoading(true);

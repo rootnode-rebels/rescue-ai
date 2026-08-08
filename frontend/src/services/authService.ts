@@ -604,16 +604,34 @@ export function subscribeUsersListStream(
 
 export const subscribeAllUsers = subscribeUsersListStream;
 
-export async function updateUserRoleInFirestore(uid: string, targetRole: UserRole): Promise<void> {
+export async function updateUserRoleInFirestore(uid: string, targetRole: UserRole, email?: string): Promise<void> {
   try {
-    await setDoc(doc(db, USERS_COLLECTION, uid), { role: targetRole, updatedAt: new Date().toISOString() }, { merge: true });
-    // Also save to localStorage if this is the active user
+    const updatePayload = { role: targetRole, updatedAt: new Date().toISOString() };
+
+    if (uid) {
+      await setDoc(doc(db, USERS_COLLECTION, uid), updatePayload, { merge: true });
+    }
+
+    if (email) {
+      const cleanEmail = email.toLowerCase().trim();
+      const cleanDocId = "user-" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_");
+      await setDoc(doc(db, USERS_COLLECTION, cleanDocId), updatePayload, { merge: true });
+
+      try {
+        const q = query(collection(db, USERS_COLLECTION), where("email", "==", cleanEmail));
+        const querySnap = await getDocs(q);
+        querySnap.forEach((docSnap) => {
+          setDoc(docSnap.ref, updatePayload, { merge: true }).catch(() => {});
+        });
+      } catch (e) {}
+    }
+
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         try {
           const profile = JSON.parse(stored) as UserProfile;
-          if (profile && profile.uid === uid) {
+          if (profile && (profile.uid === uid || (email && profile.email?.toLowerCase() === email.toLowerCase()))) {
             profile.role = targetRole;
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profile));
           }
