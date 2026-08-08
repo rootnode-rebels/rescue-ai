@@ -604,12 +604,22 @@ export function subscribeUsersListStream(
 
 export const subscribeAllUsers = subscribeUsersListStream;
 
-/**
- * Updates user role by Super Admin.
- */
 export async function updateUserRoleInFirestore(uid: string, targetRole: UserRole): Promise<void> {
   try {
-    await updateDoc(doc(db, USERS_COLLECTION, uid), { role: targetRole });
+    await setDoc(doc(db, USERS_COLLECTION, uid), { role: targetRole, updatedAt: new Date().toISOString() }, { merge: true });
+    // Also save to localStorage if this is the active user
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        try {
+          const profile = JSON.parse(stored) as UserProfile;
+          if (profile && profile.uid === uid) {
+            profile.role = targetRole;
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(profile));
+          }
+        } catch (e) {}
+      }
+    }
   } catch (err) {
     console.warn("Update role error:", err);
   }

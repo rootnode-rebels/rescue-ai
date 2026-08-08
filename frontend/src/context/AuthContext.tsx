@@ -116,9 +116,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const updated = snapshot.data() as UserProfile;
             if (updated && updated.role) {
               setUserProfile((prev) => {
-                if (prev?.role !== updated.role || prev?.name !== updated.name) {
-                  saveProfileToLocalStorage({ ...prev, ...updated });
-                  return { ...prev, ...updated };
+                if (prev && (prev.role !== updated.role || prev.name !== updated.name)) {
+                  const merged = { ...prev, ...updated };
+                  saveProfileToLocalStorage(merged);
+                  return merged;
                 }
                 return prev;
               });
