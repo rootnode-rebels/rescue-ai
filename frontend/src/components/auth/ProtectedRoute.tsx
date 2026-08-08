@@ -34,27 +34,41 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { currentUser, userProfile, loading } = useAuth();
   const router = useRouter();
 
-  const isProfileReady = currentUser && userProfile && userProfile.uid === currentUser.uid;
+  // Support both Firebase Auth user & Local Session UserProfile
+  const activeProfile =
+    userProfile ||
+    (typeof window !== "undefined"
+      ? (() => {
+          try {
+            const cached = localStorage.getItem("rescueai_user_profile");
+            return cached ? JSON.parse(cached) : null;
+          } catch (e) {
+            return null;
+          }
+        })()
+      : null);
+
+  const isAuthenticated = !!(currentUser || activeProfile);
 
   useEffect(() => {
     if (!loading) {
       // 1. Not authenticated -> Redirect to /login
-      if (!currentUser) {
+      if (!isAuthenticated) {
         router.push("/login");
         return;
       }
 
-      // 2. Role restriction check (only evaluate when profile is ready)
-      if (allowedRoles && allowedRoles.length > 0 && isProfileReady) {
-        if (!allowedRoles.includes(userProfile.role)) {
-          const targetDashboard = getRoleDashboard(userProfile.role);
+      // 2. Role restriction check
+      if (allowedRoles && allowedRoles.length > 0 && activeProfile) {
+        if (!allowedRoles.includes(activeProfile.role)) {
+          const targetDashboard = getRoleDashboard(activeProfile.role);
           router.push(targetDashboard);
         }
       }
     }
-  }, [currentUser, userProfile, loading, allowedRoles, router, isProfileReady]);
+  }, [currentUser, activeProfile, loading, allowedRoles, router, isAuthenticated]);
 
-  if (loading || (currentUser && !isProfileReady)) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100 font-sans">
         <div className="flex flex-col items-center gap-4">
@@ -65,11 +79,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (!currentUser) {
+  if (!isAuthenticated) {
     return null;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && isProfileReady && !allowedRoles.includes(userProfile.role)) {
+  if (allowedRoles && allowedRoles.length > 0 && activeProfile && !allowedRoles.includes(activeProfile.role)) {
     return null;
   }
 

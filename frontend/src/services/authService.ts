@@ -50,7 +50,7 @@ function getBootstrapRole(email: string): UserRole {
 /**
  * Helper to construct an emergency fallback profile if Firebase Auth throws auth errors or unauthorized-domain.
  */
-function createFallbackProfile(email: string, name?: string, phone?: string): UserProfile {
+export function createFallbackProfile(email: string, name?: string, phone?: string): UserProfile {
   const cleanEmail = email.trim().toLowerCase();
   const role = getBootstrapRole(cleanEmail);
   const now = new Date().toISOString();
