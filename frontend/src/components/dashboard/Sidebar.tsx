@@ -44,129 +44,65 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
   const isRescueUser = userProfile?.role === "rescue_admin" || userProfile?.role === "rescue";
   const isAdminUser = userProfile?.role === "global_admin";
 
-  // Strict Role-Based Menu Filtering
-  const getRoleBasedItems = () => {
-    if (isRescueUser) {
-      return [
-        {
-          id: "rescue-dashboard",
-          label: "Tactical Command Grid",
-          icon: Radio,
-          href: "/rescue-dashboard",
-          badge: "OPERATIONAL",
-        },
-        {
-          id: "my-requests",
-          label: "Active Dispatches",
-          icon: FileText,
-          href: "/rescue-dashboard#dispatches",
-        },
-        {
-          id: "profile",
-          label: "Rescue Unit Profile",
-          icon: User,
-          href: "/rescue-dashboard#profile",
-        },
-        {
-          id: "settings",
-          label: "Console Settings",
-          icon: Settings,
-          href: "/rescue-dashboard#settings",
-        },
-      ];
-    }
-
-    if (isAdminUser) {
-      return [
-        {
-          id: "admin",
-          label: "EOC Super Admin",
-          icon: Shield,
-          href: "/admin",
-          badge: "SUPER ADMIN",
-        },
-        {
-          id: "alerts",
-          label: "National Alerts",
-          icon: Bell,
-          href: "/admin#alerts",
-        },
-        {
-          id: "rescue-dashboard",
-          label: "NDRF Operations",
-          icon: Radio,
-          href: "/rescue-dashboard",
-        },
-        {
-          id: "profile",
-          label: "Admin Profile",
-          icon: User,
-          href: "/admin#profile",
-        },
-      ];
-    }
-
-    // Default: Citizen Role
-    return [
-      {
-        id: "dashboard",
-        label: "Citizen Dashboard",
-        icon: LayoutDashboard,
-        href: "/dashboard",
-      },
-      {
-        id: "sos",
-        label: "Emergency SOS",
-        icon: Flame,
-        href: "/sos",
-        badge: "LIVE",
-      },
-      {
-        id: "ai-assistant",
-        label: "AI Survival Assistant",
-        icon: Bot,
-        href: "/ai-assistant",
-      },
-      {
-        id: "my-requests",
-        label: "My SOS History",
-        icon: FileText,
-        href: "/dashboard#my-requests",
-      },
-      {
-        id: "shelters",
-        label: "Relief Shelters",
-        icon: Building,
-        href: "/dashboard#shelters",
-      },
-      {
-        id: "alerts",
-        label: "Live Emergency Alerts",
-        icon: Bell,
-        href: "/dashboard#alerts",
-      },
-      {
-        id: "guide",
-        label: "Emergency Guide",
-        icon: BookOpen,
-        href: "/dashboard#guide",
-      },
-      {
-        id: "profile",
-        label: "My Profile",
-        icon: User,
-        href: "/dashboard#profile",
-      },
-      {
-        id: "settings",
-        label: "Settings",
-        icon: Settings,
-        href: "/dashboard#settings",
-      },
-    ];
-  };
-
-  const navigationItems = getRoleBasedItems();
+  // Provide complete menu items across all dashboards so every button & service is 100% accessible!
+  const navigationItems = [
+    {
+      id: isRescueUser ? "rescue-dashboard" : isAdminUser ? "admin" : "dashboard",
+      label: isRescueUser ? "Tactical Command Grid" : isAdminUser ? "EOC Super Admin" : "Citizen Dashboard",
+      icon: isRescueUser ? Radio : isAdminUser ? Shield : LayoutDashboard,
+      href: isRescueUser ? "/rescue-dashboard" : isAdminUser ? "/admin" : "/dashboard",
+      badge: "OPERATIONAL",
+    },
+    {
+      id: "sos",
+      label: "Emergency SOS Signal",
+      icon: Flame,
+      href: "/sos",
+      badge: "LIVE",
+    },
+    {
+      id: "ai-assistant",
+      label: "AI Survival Assistant",
+      icon: Bot,
+      href: "/ai-assistant",
+    },
+    {
+      id: "my-requests",
+      label: isRescueUser ? "Active Dispatches" : "My SOS Requests",
+      icon: FileText,
+      href: isRescueUser ? "/rescue-dashboard#dispatches" : "/dashboard#my-requests",
+    },
+    {
+      id: "shelters",
+      label: "Relief Shelters",
+      icon: Building,
+      href: "/dashboard#shelters",
+    },
+    {
+      id: "alerts",
+      label: "Live Emergency Alerts",
+      icon: Bell,
+      href: "/dashboard#alerts",
+    },
+    {
+      id: "guide",
+      label: "Emergency Guide",
+      icon: BookOpen,
+      href: "/dashboard#guide",
+    },
+    {
+      id: "profile",
+      label: isRescueUser ? "Rescue Unit Profile" : "My Profile",
+      icon: User,
+      href: isRescueUser ? "/rescue-dashboard#profile" : "/dashboard#profile",
+    },
+    {
+      id: "settings",
+      label: "Console Settings",
+      icon: Settings,
+      href: isRescueUser ? "/rescue-dashboard#settings" : "/dashboard#settings",
+    },
+  ];
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col h-screen sticky top-0 shrink-0 z-30 font-sans">

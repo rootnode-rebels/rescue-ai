@@ -631,20 +631,11 @@ export async function deleteUserInFirestore(uid: string): Promise<void> {
 }
 
 /**
- * Resets user password via Firebase Auth + Dual Resend Email API fallback!
- * Guarantees zero failures even during domain restrictions or network outages.
+ * Resets user password via Resend Email API exclusively.
+ * Sends exactly 1 email to eliminate duplicate notifications!
  */
 export async function resetPasswordService(email: string): Promise<void> {
   const cleanEmail = email.trim().toLowerCase();
-  
-  // 1. Firebase Auth reset attempt
-  try {
-    await sendPasswordResetEmail(auth, cleanEmail);
-  } catch (err) {
-    console.warn("Firebase Reset Password notice (Using Fallback API):", err);
-  }
-
-  // 2. Dual Fallback: Dispatch via internal Resend Email API route
   try {
     await fetch("/api/send-reset-email", {
       method: "POST",
@@ -652,7 +643,7 @@ export async function resetPasswordService(email: string): Promise<void> {
       body: JSON.stringify({ email: cleanEmail, actionType: "reset" }),
     });
   } catch (e) {
-    console.warn("Resend email API fallback notice:", e);
+    console.warn("Resend email dispatch notice:", e);
   }
 }
 
