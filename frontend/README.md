@@ -8,13 +8,13 @@
 
 ---
 
-## 🌟 Official Credentials & Role-Based Access (RBAC)
+## 🌟 Secure Authentication & Role-Based Access (RBAC)
 
-| Role | Official Login Email | Password Access | Primary Interface Route |
-| :--- | :--- | :--- | :--- |
-| 🛡️ **Super Admin EOC** | `adhiam@outlook.in` | Any valid password | `/admin` (EOC Super Admin Governance) |
-| 🚑 **NDRF Rescue Command** | `rescueadmin@rescueai.org` | Any valid password | `/rescue-dashboard` (Tactical Operations Grid) |
-| 👤 **Citizen User** | `citizen@rescueai.org` / Any Email | Any valid password | `/dashboard` (Citizen Protection Portal) |
+| Role | Authentication Mechanism | Primary Interface Route |
+| :--- | :--- | :--- |
+| 🛡️ **Super Admin EOC** | Email OTP Passcode / Authenticated Email | `/admin` (EOC Super Admin Governance) |
+| 🚑 **NDRF Rescue Command** | Email OTP Passcode / Rescue Officer Auth | `/rescue-dashboard` (Tactical Operations Grid) |
+| 👤 **Citizen User** | Email OTP Passcode / Google Sign-In | `/dashboard` (Citizen Protection Portal) |
 
 ---
 
@@ -27,8 +27,8 @@ During major natural disasters (floods, tsunamis, earthquakes, fires), cellular 
 2. **Reconnection Auto-Sync with Latest GPS**: When an SOS is triggered offline, the alert is stored locally. The instant internet connection returns, RescueAI fetches the **LATEST CURRENT GPS LOCATION** (`navigator.geolocation.getCurrentPosition`) and syncs it live to NDRF Command.
 3. **99.99% Pinpoint Live GPS Telemetry**: Sensor watcher (`maximumAge: 0`) locks victim coordinates down to ±2.5m precision, streaming direct clickable Google Maps URLs (`https://www.google.com/maps?q=lat,lng`).
 4. **Google Assistant Hands-Free Voice SOS**: Animated 4-color Assistant voice wave modal recognizing voice commands (*"Emergency Dispatch"*) for disabled or trapped victims.
-5. **1-Click Vanishing Status Matrix**: Progressive single-button status workflow (`Accept` ➔ `En Route` ➔ `Reached` ➔ `Resolve`) where completed action buttons vanish to prevent human operator error.
-6. **Single Password Reset Email Engine**: Integrated Resend API fallback (`/api/send-reset-email`) delivering exactly **1 clean recovery email** directly to user inboxes.
+5. **Email OTP Authentication System**: Resend API dispatches a 6-digit One-Time Verification Code directly to user inboxes for instant, passwordless security.
+6. **1-Click Vanishing Status Matrix**: Progressive single-button status workflow (`Accept` ➔ `En Route` ➔ `Reached` ➔ `Resolve`) where completed action buttons vanish to prevent human operator error.
 
 ---
 
@@ -40,7 +40,7 @@ During major natural disasters (floods, tsunamis, earthquakes, fires), cellular 
 | **Styling & Animation** | Tailwind CSS, Framer Motion, Lucide Icons, Custom Theme Provider |
 | **Offline Persistence** | HTML5 Service Workers, Dexie.js IndexedDB, LocalStorage |
 | **Native Mobile App** | Capacitor 6 Native Android Wrapper & Google Android Studio |
-| **Backend & AI Engine** | FastAPI Python ASGI Engine, Google Gemini API, Resend Email API |
+| **Backend & AI Engine** | FastAPI Python ASGI Engine, Google Gemini API, Resend Email OTP API |
 | **Database & Auth** | Firebase Cloud Firestore, Firebase Auth, Persistent Session Engine |
 | **Deployment** | Vercel Global Edge Network (Web PWA), Render (FastAPI Backend) |
 

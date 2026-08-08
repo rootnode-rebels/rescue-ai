@@ -16,28 +16,41 @@ import {
   Users,
   AlertCircle,
   KeyRound,
+  Key,
+  CheckCircle2,
+  Send,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginFormData } from "@/types/auth";
 import { getRoleDashboard } from "./ProtectedRoute";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
+import { sendLoginOTP, verifyLoginOTP } from "@/services/authService";
 
 export const LoginForm: React.FC = () => {
   const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
 
+  // Auth Mode: "password" vs "otp"
+  const [authMode, setAuthMode] = useState<"password" | "otp">("password");
+
+  // Form Data
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
     rememberMe: true,
   });
 
-  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+  // OTP State
+  const [otpCode, setOtpCode] = useState<string>("");
+  const [otpSent, setOtpSent] = useState<boolean>(false);
+  const [otpMessage, setOtpMessage] = useState<string>("");
+
+  const [errors, setErrors] = useState<{ email?: string; password?: string; otp?: string; general?: string }>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState<boolean>(false);
 
-  const validate = (): boolean => {
+  const validatePasswordMode = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!formData.email.trim()) {
@@ -54,9 +67,9 @@ export const LoginForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validatePasswordMode()) return;
 
     setLoading(true);
     setErrors({});
@@ -72,16 +85,53 @@ export const LoginForm: React.FC = () => {
       let message = "Invalid email or password. Please check your credentials.";
       const firebaseError = err as { code?: string; message?: string };
       
-      if (firebaseError.code === "auth/admin-password-mismatch" || firebaseError.message?.includes("Authorized")) {
-        message = firebaseError.message || "Authorized Admin account detected. Please check your assigned temporary password or click 'Forgot password?' below.";
-      } else if (firebaseError.code === "auth/invalid-credential" || firebaseError.code === "auth/wrong-password") {
-        message = "Incorrect password. If you forgot your password, please click 'Forgot password?' to receive a reset link in your email.";
-      } else if (firebaseError.code === "auth/user-not-found") {
-        message = "No account found with this email address. Click 'Register as Citizen' below to create your account.";
-      } else if (firebaseError.message) {
+      if (firebaseError.message) {
         message = firebaseError.message;
       }
       setErrors({ general: message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestOTP = async () => {
+    if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors({ email: "Please enter a valid email address to receive OTP." });
+      return;
+    }
+
+    setLoading(true);
+    setErrors({});
+
+    try {
+      await sendLoginOTP(formData.email);
+      setOtpSent(true);
+      setOtpMessage(`6-Digit Verification OTP sent to ${formData.email} via Resend API!`);
+    } catch (e) {
+      setErrors({ general: "Failed to dispatch OTP email. Please try again." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setErrors({ otp: "Please enter the complete 6-digit OTP code." });
+      return;
+    }
+
+    setLoading(true);
+    setErrors({});
+
+    try {
+      const profile = await verifyLoginOTP(formData.email, otpCode);
+      if (profile) {
+        const targetDashboard = getRoleDashboard(profile.role);
+        router.push(targetDashboard);
+      }
+    } catch (e) {
+      setErrors({ general: "Invalid OTP code. Please check your inbox or click Resend." });
     } finally {
       setLoading(false);
     }
@@ -116,7 +166,7 @@ export const LoginForm: React.FC = () => {
         className="w-full bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl shadow-slate-900/10 border border-gray-100 p-8 sm:p-12 relative z-10"
       >
         {/* Card Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="w-14 h-14 bg-red-600 rounded-2xl text-white shadow-xl shadow-red-600/30 flex items-center justify-center mx-auto mb-4 hover:scale-105 transition-transform">
             <ShieldAlert className="w-8 h-8" />
           </div>
@@ -126,6 +176,30 @@ export const LoginForm: React.FC = () => {
           <p className="text-xs sm:text-sm text-gray-500 font-medium mt-2 max-w-sm mx-auto">
             Access the RescueAI Emergency Coordination Command Center
           </p>
+        </div>
+
+        {/* Auth Mode Toggle Tabs: Password vs OTP */}
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-6">
+          <button
+            type="button"
+            onClick={() => { setAuthMode("password"); setErrors({}); }}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+              authMode === "password" ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Password Sign In</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAuthMode("otp"); setErrors({}); }}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+              authMode === "otp" ? "bg-red-600 text-white shadow-md shadow-red-950/30" : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span>Email OTP Login</span>
+          </button>
         </div>
 
         {/* General Error Banner */}
@@ -150,100 +224,181 @@ export const LoginForm: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Input Field */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Email Address</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <Mail className="w-5 h-5" />
+        {/* MODE 1: PASSWORD LOGIN */}
+        {authMode === "password" ? (
+          <form onSubmit={handlePasswordSubmit} className="space-y-5">
+            {/* Email Input Field */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Email Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter your email"
+                  disabled={loading}
+                  className={`w-full h-14 pl-12 pr-4 bg-white border ${
+                    errors.email ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                />
               </div>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="citizen@rescueai.org"
-                disabled={loading}
-                className={`w-full h-14 pl-12 pr-4 bg-white border ${
-                  errors.email ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
-              />
+              {errors.email && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.email}</p>}
             </div>
-            {errors.email && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.email}</p>}
-          </div>
 
-          {/* Password Input Field */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-gray-700">Password</label>
+            {/* Password Input Field */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-gray-700">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotModalOpen(true)}
+                  className="text-xs font-semibold text-red-600 hover:text-red-700 transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="••••••••"
+                  disabled={loading}
+                  className={`w-full h-14 pl-12 pr-12 bg-white border ${
+                    errors.password ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.password}</p>}
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center pt-1">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={formData.rememberMe}
+                onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 accent-red-600 cursor-pointer"
+              />
+              <label htmlFor="remember-me" className="ml-2.5 text-xs font-medium text-gray-600 select-none cursor-pointer">
+                Remember my session on this device
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-red-600/30 hover:shadow-red-600/50 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 uppercase tracking-wider mt-2"
+            >
+              {loading ? (
+                <>
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In to RescueAI</span>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          /* MODE 2: EMAIL OTP LOGIN */
+          <form onSubmit={handleVerifyOTP} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Email Address for OTP</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter your email"
+                  disabled={loading || otpSent}
+                  className={`w-full h-14 pl-12 pr-4 bg-white border ${
+                    errors.email ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
+                  } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
+                />
+              </div>
+              {errors.email && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.email}</p>}
+            </div>
+
+            {!otpSent ? (
               <button
                 type="button"
-                onClick={() => setIsForgotModalOpen(true)}
-                className="text-xs font-semibold text-red-600 hover:text-red-700 transition-colors"
-              >
-                Forgot password?
-              </button>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <Lock className="w-5 h-5" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
+                onClick={handleRequestOTP}
                 disabled={loading}
-                className={`w-full h-14 pl-12 pr-12 bg-white border ${
-                  errors.password ? "border-red-500 ring-2 ring-red-500/20" : "border-gray-200"
-                } rounded-2xl text-sm text-gray-900 placeholder-gray-400 shadow-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 font-medium`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-                aria-label="Toggle password visibility"
+                className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-red-600/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <Send className="w-4 h-4" />
+                <span>Send 6-Digit OTP to Email via Resend</span>
               </button>
-            </div>
-            {errors.password && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.password}</p>}
-          </div>
-
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center pt-1">
-            <input
-              id="remember-me"
-              type="checkbox"
-              checked={formData.rememberMe}
-              onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 accent-red-600 cursor-pointer"
-            />
-            <label htmlFor="remember-me" className="ml-2.5 text-xs font-medium text-gray-600 select-none cursor-pointer">
-              Remember my session on this device
-            </label>
-          </div>
-
-          {/* Primary Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-red-600/30 hover:shadow-red-600/50 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 uppercase tracking-wider mt-2"
-          >
-            {loading ? (
-              <>
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Authenticating...</span>
-              </>
             ) : (
-              <>
-                <span>Sign In to RescueAI</span>
-                <ArrowRight className="w-4 h-4 text-white" />
-              </>
+              <div className="space-y-4">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{otpMessage}</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Enter 6-Digit Verification OTP</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <Key className="w-5 h-5 text-red-600" />
+                    </div>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      placeholder="e.g. 482915"
+                      disabled={loading}
+                      className="w-full h-14 pl-12 pr-4 bg-white border border-gray-200 rounded-2xl text-lg text-gray-900 font-black tracking-widest text-center shadow-xs focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  {errors.otp && <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.otp}</p>}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl shadow-lg transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  {loading ? "Verifying OTP..." : "Verify OTP & Sign In Now"}
+                </button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={handleRequestOTP}
+                    className="text-xs text-red-600 font-bold hover:underline"
+                  >
+                    Resend OTP Code
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
-        </form>
+          </form>
+        )}
 
         {/* Divider */}
         <div className="my-8 flex items-center gap-3">

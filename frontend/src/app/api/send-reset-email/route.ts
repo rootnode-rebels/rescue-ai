@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, name, role, tempPassword, actionType } = body;
+    const { email, name, role, tempPassword, otpCode, actionType } = body;
 
     if (!email) {
       return NextResponse.json({ ok: false, error: "Email is required." }, { status: 400 });
@@ -15,21 +15,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, message: "Email dispatch queued." });
     }
 
+    const isOtp = actionType === "otp";
     const isProvisioning = actionType === "provision";
-    const subject = isProvisioning
+
+    const subject = isOtp
+      ? `🔑 RescueAI Login Verification OTP: ${otpCode}`
+      : isProvisioning
       ? `🚨 RescueAI Account Provisioned (${(role || "User").toUpperCase()})`
       : "🔒 RescueAI Password Reset Request";
 
-    // Dynamic Sender Addresses for Custom Domain & Prefixes
+    // Dynamic Sender Address
     let fromAddress = "RescueAI Security <account@mail.rescue-ai.l.cd>";
-    if (actionType === "provision") {
+    if (isOtp) {
+      fromAddress = "RescueAI Auth <otp@mail.rescue-ai.l.cd>";
+    } else if (isProvisioning) {
       fromAddress = "RescueAI Admin Command <admin@mail.rescue-ai.l.cd>";
-    } else if (actionType === "emergency") {
-      fromAddress = "RescueAI Emergency Dispatch <emergency@mail.rescue-ai.l.cd>";
     }
 
-    const htmlContent = isProvisioning
-      ? `
+    let htmlContent = "";
+
+    if (isOtp) {
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 30px; border-radius: 16px;">
+          <h2 style="color: #ef4444; margin-bottom: 8px;">RescueAI Emergency Portal</h2>
+          <p style="color: #94a3b8; font-size: 14px;">One-Time Verification Passcode (OTP)</p>
+          <hr style="border-color: #334155; margin: 20px 0;" />
+          <p>Hello,</p>
+          <p>Your one-time login verification code for <strong>RescueAI</strong> account (<strong>${email}</strong>) is:</p>
+          <div style="background-color: #1e293b; border: 2px solid #ef4444; padding: 20px; text-align: center; border-radius: 12px; margin: 25px 0;">
+            <span style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #38bdf8;">${otpCode}</span>
+          </div>
+          <p style="color: #94a3b8; font-size: 13px;">This OTP code expires in 10 minutes. Do not share this code with anyone.</p>
+          <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Sender: otp@mail.rescue-ai.l.cd</p>
+        </div>
+      `;
+    } else if (isProvisioning) {
+      htmlContent = `
         <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 30px; border-radius: 16px;">
           <h2 style="color: #ef4444; margin-bottom: 8px;">RescueAI Emergency Command Center</h2>
           <p style="color: #94a3b8; font-size: 14px;">Official Credentials Provisioning Notification</p>
@@ -44,8 +65,9 @@ export async function POST(request: Request) {
           <p>Please log in at <a href="https://frontend-flame-two-34.vercel.app/login" style="color: #ef4444; font-weight: bold;">RescueAI Portal (/login)</a> and change your password upon initial sign in.</p>
           <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Sender: account@mail.rescue-ai.l.cd</p>
         </div>
-      `
-      : `
+      `;
+    } else {
+      htmlContent = `
         <div style="font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 30px; border-radius: 16px;">
           <h2 style="color: #ef4444; margin-bottom: 8px;">RescueAI Account Recovery</h2>
           <p style="color: #94a3b8; font-size: 14px;">Password Reset Request</p>
@@ -60,8 +82,9 @@ export async function POST(request: Request) {
           <p style="color: #64748b; font-size: 12px; margin-top: 30px;">National Emergency Coordination Platform • Sender: account@mail.rescue-ai.l.cd</p>
         </div>
       `;
+    }
 
-    // Attempt 1: Custom domain account@mail.rescue-ai.l.cd
+    // Attempt 1: Resend Custom domain
     let resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -78,10 +101,12 @@ export async function POST(request: Request) {
 
     let resendData = await resendRes.json();
 
-    // Fallback Attempt 2: If domain is not verified yet in Resend, use onboarding@resend.dev for guaranteed inbox delivery
+    // Fallback Attempt 2: onboarding@resend.dev
     if (!resendRes.ok) {
       console.warn("Retrying with fallback onboarding sender domain...");
-      const fallbackSender = isProvisioning
+      const fallbackSender = isOtp
+        ? "RescueAI Security OTP <onboarding@resend.dev>"
+        : isProvisioning
         ? "RescueAI Super Admin <onboarding@resend.dev>"
         : "RescueAI Security <onboarding@resend.dev>";
 
