@@ -27,7 +27,7 @@ import { ForgotPasswordModal } from "./ForgotPasswordModal";
 import { sendLoginOTP, verifyLoginOTP } from "@/services/authService";
 
 export const LoginForm: React.FC = () => {
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, loginWithOTP } = useAuth();
   const router = useRouter();
 
   // Auth Mode: "password" vs "otp"
@@ -125,7 +125,7 @@ export const LoginForm: React.FC = () => {
     setErrors({});
 
     try {
-      const profile = await verifyLoginOTP(formData.email, otpCode);
+      const profile = await loginWithOTP(formData.email, otpCode);
       if (profile) {
         const targetDashboard = getRoleDashboard(profile.role);
         router.push(targetDashboard);

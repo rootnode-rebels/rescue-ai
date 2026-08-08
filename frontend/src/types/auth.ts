@@ -97,6 +97,7 @@ export interface AuthContextType {
   login: (data: LoginFormData) => Promise<UserProfile | null>;
   register: (data: RegisterFormData) => Promise<UserProfile | null>;
   loginWithGoogle: (role?: UserRole) => Promise<UserProfile | null>;
+  loginWithOTP: (email: string, otpCode: string) => Promise<UserProfile | null>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;

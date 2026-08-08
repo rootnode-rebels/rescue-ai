@@ -10,6 +10,7 @@ import {
   logoutUser,
   registerWithEmail,
   resetPassword as resetPasswordService,
+  verifyLoginOTP,
 } from "@/services/authService";
 import {
   AuthContextType,
@@ -133,6 +134,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithOTP = async (email: string, otpCode: string): Promise<UserProfile | null> => {
+    setLoading(true);
+    try {
+      const profile = await verifyLoginOTP(email, otpCode);
+      setUserProfile(profile);
+      return profile;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async (): Promise<void> => {
     setLoading(true);
     try {
@@ -164,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     loginWithGoogle,
+    loginWithOTP,
     logout,
     resetPassword,
     refreshProfile,
