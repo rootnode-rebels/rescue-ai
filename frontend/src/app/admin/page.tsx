@@ -700,8 +700,8 @@ function SuperAdminContent() {
                   <span className="text-emerald-400 font-bold">ONLINE (https://rescueai-backend-3u2o.onrender.com)</span>
                 </div>
                 <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center">
-                  <span className="text-slate-400">Resend API Email Engine:</span>
-                  <span className="text-emerald-400 font-bold">ACTIVE (re_VMgxBVZy_...)</span>
+                  <span className="text-slate-400">Automated Email Dispatch Engine:</span>
+                  <span className="text-emerald-400 font-bold">ACTIVE (SECURITY ENCRYPTION)</span>
                 </div>
                 <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center">
                   <span className="text-slate-400">Cloud Firestore DB:</span>

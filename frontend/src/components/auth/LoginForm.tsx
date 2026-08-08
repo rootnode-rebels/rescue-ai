@@ -106,7 +106,7 @@ export const LoginForm: React.FC = () => {
     try {
       await sendLoginOTP(formData.email);
       setOtpSent(true);
-      setOtpMessage(`6-Digit Verification OTP sent to ${formData.email} via Resend API!`);
+      setOtpMessage(`6-Digit Verification OTP code sent to ${formData.email}!`);
     } catch (e) {
       setErrors({ general: "Failed to dispatch OTP email. Please try again." });
     } finally {
@@ -131,7 +131,7 @@ export const LoginForm: React.FC = () => {
         router.push(targetDashboard);
       }
     } catch (e) {
-      setErrors({ general: "Invalid OTP code. Please check your inbox or click Resend." });
+      setErrors({ general: "Invalid OTP code. Please check your inbox or request a new code." });
     } finally {
       setLoading(false);
     }
@@ -350,7 +350,7 @@ export const LoginForm: React.FC = () => {
                 className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-red-600/30 transition-all uppercase tracking-wider flex items-center justify-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                <span>Send 6-Digit OTP to Email via Resend</span>
+                <span>Send 6-Digit Verification OTP</span>
               </button>
             ) : (
               <div className="space-y-4">
@@ -392,7 +392,7 @@ export const LoginForm: React.FC = () => {
                     onClick={handleRequestOTP}
                     className="text-xs text-red-600 font-bold hover:underline"
                   >
-                    Resend OTP Code
+                    Request New OTP Code
                   </button>
                 </div>
               </div>
