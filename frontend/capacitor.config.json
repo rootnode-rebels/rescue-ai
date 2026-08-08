@@ -1,10 +1,9 @@
 {
   "appId": "org.rescueai.app",
   "appName": "RescueAI",
-  "webDir": "out",
-  "bundledWebRuntime": false,
+  "webDir": "public",
   "server": {
-    "androidScheme": "https",
+    "url": "https://frontend-flame-two-34.vercel.app",
     "cleartext": true
   },
   "plugins": {
