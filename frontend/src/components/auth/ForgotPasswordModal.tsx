@@ -47,7 +47,12 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         message: `6-Digit Reset Verification Code dispatched to ${cleanEmail}! Please check your inbox.`,
       });
     } catch (err: unknown) {
+<<<<<<< HEAD
       setStatus({ type: "error", message: "Failed to dispatch reset code. Please try again." });
+=======
+      const message = err instanceof Error ? err.message : "Failed to dispatch reset code. Please try again.";
+      setStatus({ type: "error", message });
+>>>>>>> bdb9237 (feat: Pure white monochrome UI redesign & fix OTP email error propagation)
     } finally {
       setLoading(false);
     }

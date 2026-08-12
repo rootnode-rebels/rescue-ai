@@ -660,6 +660,7 @@ export async function deleteUserInFirestore(uid: string): Promise<void> {
  */
 export async function resetPasswordService(email: string): Promise<void> {
   const cleanEmail = email.trim().toLowerCase();
+<<<<<<< HEAD
   try {
     await fetch("/api/send-reset-email", {
       method: "POST",
@@ -668,6 +669,16 @@ export async function resetPasswordService(email: string): Promise<void> {
     });
   } catch (e) {
     console.warn("Resend email dispatch notice:", e);
+=======
+  const res = await fetch("/api/send-reset-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: cleanEmail, actionType: "reset" }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || data.message || `Password reset email failed (${res.status})`);
+>>>>>>> bdb9237 (feat: Pure white monochrome UI redesign & fix OTP email error propagation)
   }
 }
 
@@ -684,6 +695,7 @@ export async function sendLoginOTP(email: string): Promise<string> {
     localStorage.setItem(`rescueai_otp_${cleanEmail}`, generatedOtp);
   }
 
+<<<<<<< HEAD
   try {
     await fetch("/api/send-reset-email", {
       method: "POST",
@@ -696,6 +708,21 @@ export async function sendLoginOTP(email: string): Promise<string> {
     });
   } catch (e) {
     console.warn("OTP dispatch error via Resend API:", e);
+=======
+  const res = await fetch("/api/send-reset-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: cleanEmail,
+      otpCode: generatedOtp,
+      actionType: "otp",
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || data.message || `OTP email dispatch failed (${res.status})`);
+>>>>>>> bdb9237 (feat: Pure white monochrome UI redesign & fix OTP email error propagation)
   }
 
   return generatedOtp;

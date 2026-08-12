@@ -107,8 +107,14 @@ export const LoginForm: React.FC = () => {
       await sendLoginOTP(formData.email);
       setOtpSent(true);
       setOtpMessage(`6-Digit Verification OTP code sent to ${formData.email}!`);
+<<<<<<< HEAD
     } catch (e) {
       setErrors({ general: "Failed to dispatch OTP email. Please try again." });
+=======
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Failed to dispatch OTP email. Please try again.";
+      setErrors({ general: errorMessage });
+>>>>>>> bdb9237 (feat: Pure white monochrome UI redesign & fix OTP email error propagation)
     } finally {
       setLoading(false);
     }
