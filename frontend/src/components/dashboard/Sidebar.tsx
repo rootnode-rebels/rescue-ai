@@ -17,6 +17,10 @@ import {
   LogOut,
   Radio,
   Shield,
+<<<<<<< HEAD
+=======
+  WifiOff,
+>>>>>>> d3f869c (feat: complete RescueAI platform with pure white monochrome UI, OTP auth fix, real-time shelter spot decrementing, printable evacuation pass invoice, mobile map coordinate accuracy fix, Next.js 15 SEO metadata, and social link preview hub)
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -27,6 +31,10 @@ export type DashboardViewMode =
   | "shelters"
   | "my-requests"
   | "guide"
+<<<<<<< HEAD
+=======
+  | "offline-apps"
+>>>>>>> d3f869c (feat: complete RescueAI platform with pure white monochrome UI, OTP auth fix, real-time shelter spot decrementing, printable evacuation pass invoice, mobile map coordinate accuracy fix, Next.js 15 SEO metadata, and social link preview hub)
   | "alerts"
   | "profile"
   | "settings"
@@ -91,6 +99,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
       href: "/dashboard#guide",
     },
     {
+<<<<<<< HEAD
+=======
+      id: "offline-apps",
+      label: "Offline Apps & Mesh",
+      icon: WifiOff,
+      href: "/dashboard#offline-apps",
+      badge: "ESSENTIAL",
+    },
+    {
+>>>>>>> d3f869c (feat: complete RescueAI platform with pure white monochrome UI, OTP auth fix, real-time shelter spot decrementing, printable evacuation pass invoice, mobile map coordinate accuracy fix, Next.js 15 SEO metadata, and social link preview hub)
       id: "profile",
       label: isRescueUser ? "Rescue Unit Profile" : "My Profile",
       icon: User,

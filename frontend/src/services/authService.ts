@@ -169,6 +169,8 @@ export interface EmergencyBroadcastMessage {
   category: "FLOOD" | "CYCLONE" | "HEATWAVE" | "EARTHQUAKE" | "EVACUATION_ORDER" | "GENERAL";
   severity: "CRITICAL" | "WARNING" | "ADVISORY";
   affectedZone: string;
+  exactLocation?: string;
+  incidentDetails?: string;
   radius: string;
   instruction: string;
   dispatchedByEmail: string;
@@ -191,6 +193,8 @@ export async function dispatchEmergencyBroadcastInFirestore(
     category: broadcast.category || "GENERAL",
     severity: broadcast.severity || "CRITICAL",
     affectedZone: broadcast.affectedZone || "All Regions",
+    exactLocation: broadcast.exactLocation || "Sector 4 Lowland Basin, Coastal Highway Landmark",
+    incidentDetails: broadcast.incidentDetails || "Severe surge breach & power grid failure reported",
     radius: broadcast.radius || "10 Miles Radius",
     instruction: broadcast.instruction || "Follow emergency safety protocols.",
     dispatchedByEmail: broadcast.dispatchedByEmail || "superadmin@rescueai.org",
