@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Radio, Volume2, Power, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Radio, Power, ShieldAlert } from "lucide-react";
 
 export const FMRadioView: React.FC = () => {
   const [isOn, setIsOn] = useState(false);
@@ -22,19 +22,19 @@ export const FMRadioView: React.FC = () => {
             <Radio className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-900">Hardware FM Radio</h3>
+            <h3 className="text-lg font-black text-slate-900">RescueAI Hardware FM Radio</h3>
             <p className="text-xs text-slate-500 font-medium">Using internal FM receiver chip. Zero data required.</p>
           </div>
         </div>
-        <button onClick={() => setIsOn(!isOn)} className={p-3 rounded-full transition-all }>
+        <button onClick={() => setIsOn(!isOn)} className={`p-3 rounded-full transition-all ${isOn ? "bg-red-100 text-red-600 shadow-inner" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
           <Power className="w-5 h-5" />
         </button>
       </div>
 
       <div className="bg-slate-900 rounded-3xl p-8 flex flex-col items-center justify-center space-y-6 relative overflow-hidden shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay"></div>
+        <div className="absolute inset-0 opacity-20 mix-blend-overlay"></div>
         <div className="text-center space-y-2 relative z-10">
-          <div className={	ext-6xl font-black font-mono tracking-tighter }>
+          <div className={`text-6xl font-black font-mono tracking-tighter ${isOn ? "text-emerald-400 animate-pulse" : "text-slate-700"}`}>
             {frequency.toFixed(1)} <span className="text-2xl text-slate-500">MHz</span>
           </div>
           <div className="text-xs text-slate-400 font-bold uppercase tracking-widest">
@@ -56,7 +56,7 @@ export const FMRadioView: React.FC = () => {
         <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">Emergency Frequencies</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {predefinedChannels.map((channel) => (
-            <button key={channel.freq} onClick={() => { setIsOn(true); setFrequency(channel.freq); }} className={p-4 rounded-2xl border text-left transition-all }>
+            <button key={channel.freq} onClick={() => { setIsOn(true); setFrequency(channel.freq); }} className={`p-4 rounded-2xl border text-left transition-all ${frequency === channel.freq && isOn ? "bg-indigo-50 border-indigo-200 shadow-sm" : "bg-white border-slate-200 hover:border-indigo-300"}`}>
               <div className="text-lg font-black text-slate-900 font-mono">{channel.freq}</div>
               <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase line-clamp-1">{channel.name}</div>
               <div className="mt-2 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-red-600 bg-red-50 px-2 py-0.5 rounded-md">

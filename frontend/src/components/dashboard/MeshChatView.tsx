@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Bluetooth, Wifi, Send, PhoneCall, RadioTower } from "lucide-react";
+import { Bluetooth, Send, PhoneCall, RadioTower } from "lucide-react";
 
 export const MeshChatView: React.FC = () => {
   const [messages, setMessages] = useState<{ id: number; text: string; sender: string; isSelf: boolean }[]>([
@@ -26,7 +26,7 @@ export const MeshChatView: React.FC = () => {
             <Bluetooth className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-900">Offline Mesh Chat & Walkie-Talkie</h3>
+            <h3 className="text-lg font-black text-slate-900">RescueAI Offline Mesh Chat</h3>
             <p className="text-xs text-slate-500 font-medium">Peer-to-Peer Bluetooth & Wi-Fi Direct Network</p>
           </div>
         </div>
@@ -43,8 +43,8 @@ export const MeshChatView: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto space-y-3 p-2 no-scrollbar">
         {messages.map((msg) => (
-          <div key={msg.id} className={lex }>
-            <div className={max-w-[75%] p-3.5 rounded-2xl text-xs leading-relaxed space-y-1 }>
+          <div key={msg.id} className={`flex ${msg.isSelf ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[75%] p-3.5 rounded-2xl text-xs leading-relaxed space-y-1 ${msg.isSelf ? "bg-purple-600 text-white rounded-br-none" : "bg-slate-100 text-slate-800 rounded-bl-none"}`}>
               <div className="text-[9px] font-bold opacity-70 uppercase tracking-wider">{msg.sender}</div>
               <p>{msg.text}</p>
             </div>
