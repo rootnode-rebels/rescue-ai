@@ -2,14 +2,14 @@
 
 Thank you for helping build **RescueAI** — the offline-first AI emergency response and disaster coordination platform!
 
-Follow this step-by-step guide for open-source contributors to fork the repo, commit changes, and submit Pull Requests to the main repository.
+Follow this step-by-step guide for open-source contributors to fork the repository, commit changes, and submit Pull Requests to the main repository: **[https://github.com/rootnode-rebels/rescue-ai](https://github.com/rootnode-rebels/rescue-ai)**.
 
 ---
 
 ## 🚀 Quick Step-by-Step Workflow for Contributors
 
 ### Step 1: Fork the Main Repository
-1. Go to the main repository: [https://github.com/theadhi/rescue-ai](https://github.com/theadhi/rescue-ai) (or [https://github.com/rootnode-rebels/rescue-ai](https://github.com/rootnode-rebels/rescue-ai)).
+1. Go to the main repository: **[https://github.com/rootnode-rebels/rescue-ai](https://github.com/rootnode-rebels/rescue-ai)**.
 2. Click the **Fork** button in the top-right corner to create your personal copy under `https://github.com/YOUR_GITHUB_USERNAME/rescue-ai`.
 
 ---
@@ -22,7 +22,7 @@ git clone https://github.com/YOUR_GITHUB_USERNAME/rescue-ai.git
 cd rescue-ai
 
 # Set upstream remote to the main repository
-git remote add upstream https://github.com/theadhi/rescue-ai.git
+git remote add upstream https://github.com/rootnode-rebels/rescue-ai.git
 git fetch upstream
 ```
 
@@ -57,7 +57,7 @@ git push -u origin feature/my-awesome-feature
 1. Open your browser and go to your fork: `https://github.com/YOUR_GITHUB_USERNAME/rescue-ai`
 2. You will see a green banner: **"Compare & pull request"**. Click it!
 3. Ensure the comparison settings are:
-   - **Base Repository**: `theadhi/rescue-ai` (or `rootnode-rebels/rescue-ai`)
+   - **Base Repository**: `rootnode-rebels/rescue-ai`
    - **Base Branch**: `main`
    - **Head Repository**: `YOUR_GITHUB_USERNAME/rescue-ai`
    - **Compare Branch**: `feature/my-awesome-feature`
@@ -70,8 +70,8 @@ git push -u origin feature/my-awesome-feature
 If you have a GitHub Personal Access Token (PAT), you can run our automated helper script in PowerShell:
 
 ```powershell
-# Run PR script
-.\scripts\create-pr.ps1 -GithubUser "YOUR_USERNAME" -Token "YOUR_PAT_TOKEN" -Branch "feature/my-feature" -Title "feat: my new feature" -Body "Description of changes"
+# Run PR script targeting rootnode-rebels/rescue-ai
+.\scripts\create-pr.ps1 -GithubUser "YOUR_USERNAME" -Token "YOUR_PAT_TOKEN" -Branch "feature/my-feature" -Title "feat: my new feature" -Body "Description of changes" -TargetRepo "rootnode-rebels/rescue-ai"
 ```
 
 ---

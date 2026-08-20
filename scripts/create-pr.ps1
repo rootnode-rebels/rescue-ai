@@ -15,7 +15,7 @@ param (
     [string]$Body = "Pull Request submitted via RescueAI Contributor Helper CLI",
 
     [Parameter(Mandatory=$false)]
-    [string]$TargetRepo = "theadhi/rescue-ai"
+    [string]$TargetRepo = "rootnode-rebels/rescue-ai"
 )
 
 Write-Host "🚀 Preparing Pull Request for $GithubUser -> $TargetRepo ..." -ForegroundColor Cyan
