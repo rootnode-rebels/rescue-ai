@@ -12,7 +12,8 @@ import { RequestCard } from "./RequestCard";
 import { AlertCard } from "./AlertCard";
 import { ShelterCard } from "./ShelterCard";
 import { EmergencyGuideTab } from "./EmergencyGuideTab";
-import { OfflineAppsHub } from "./OfflineAppsHub";
+import { MeshChatView } from "./MeshChatView";
+import { FMRadioView } from "./FMRadioView";
 import { SocialPreviewHub } from "./SocialPreviewHub";
 import { CitizenSOSTrackerWithNotifications } from "./CitizenSOSTrackerWithNotifications";
 import { ProfileSettingsTab } from "./ProfileSettingsTab";
@@ -20,9 +21,9 @@ import { useAuth } from "@/hooks/useAuth";
 
 export const DashboardLayout: React.FC = () => {
   const { userProfile } = useAuth();
-  const [activeView, setActiveView] = useState<DashboardViewMode>("dashboard");
+  const [activeView, setActiveView] = useState<DashboardViewMode | "mesh-chat" | "fm-radio">("dashboard");
 
-  const handleSelectView = (view: DashboardViewMode) => {
+  const handleSelectView = (view: DashboardViewMode | "mesh-chat" | "fm-radio") => {
     setActiveView(view);
   };
 
@@ -49,7 +50,8 @@ export const DashboardLayout: React.FC = () => {
                 { id: "shelters", label: "Nearby Shelters" },
                 { id: "alerts", label: "Live Alerts" },
                 { id: "guide", label: "Emergency Guide" },
-                { id: "offline-apps", label: "Offline Apps & Mesh" },
+                { id: "mesh-chat", label: "Offline Mesh Chat" },
+                { id: "fm-radio", label: "Hardware FM Radio" },
                 { id: "profile", label: "My Profile" },
                 { id: "settings", label: "Settings" },
               ].map((tab) => (
@@ -127,7 +129,8 @@ export const DashboardLayout: React.FC = () => {
           {activeView === "shelters" && <ShelterCard />}
           {activeView === "alerts" && <AlertCard />}
           {activeView === "guide" && <EmergencyGuideTab />}
-          {activeView === "offline-apps" && <OfflineAppsHub />}
+          {activeView === "mesh-chat" && <MeshChatView />}
+          {activeView === "fm-radio" && <FMRadioView />}
           {activeView === "profile" && <ProfileSettingsTab mode="profile" />}
           {activeView === "settings" && <ProfileSettingsTab mode="settings" />}
         </main>

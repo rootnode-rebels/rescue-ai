@@ -28,7 +28,8 @@ export type DashboardViewMode =
   | "shelters"
   | "my-requests"
   | "guide"
-  | "offline-apps"
+  | "mesh-chat"
+  | "fm-radio"
   | "alerts"
   | "profile"
   | "settings"
@@ -93,11 +94,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
       href: "/dashboard#guide",
     },
     {
-      id: "offline-apps",
-      label: "Offline Apps & Mesh",
+      id: "mesh-chat",
+      label: "Offline Mesh Chat",
       icon: WifiOff,
-      href: "/dashboard#offline-apps",
-      badge: "ESSENTIAL",
+      href: "/dashboard#mesh-chat",
+      badge: "P2P",
+    },
+    {
+      id: "fm-radio",
+      label: "Hardware FM Radio",
+      icon: Radio,
+      href: "/dashboard#fm-radio",
+      badge: "OFFLINE",
     },
     {
       id: "profile",
