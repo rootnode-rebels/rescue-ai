@@ -17,6 +17,7 @@ import {
   LogOut,
   Radio,
   Shield,
+  WifiOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -27,6 +28,7 @@ export type DashboardViewMode =
   | "shelters"
   | "my-requests"
   | "guide"
+  | "offline-apps"
   | "alerts"
   | "profile"
   | "settings"
@@ -89,6 +91,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
       label: "Emergency Guide",
       icon: BookOpen,
       href: "/dashboard#guide",
+    },
+    {
+      id: "offline-apps",
+      label: "Offline Apps & Mesh",
+      icon: WifiOff,
+      href: "/dashboard#offline-apps",
+      badge: "ESSENTIAL",
     },
     {
       id: "profile",
