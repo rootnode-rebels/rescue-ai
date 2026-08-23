@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Volume2, VolumeX, AlertTriangle, Radio, MapPin, Info } from "lucide-react";
+import { Bell, Volume2, VolumeX, AlertTriangle, Radio } from "lucide-react";
 import { subscribeEmergencyBroadcasts, EmergencyBroadcastMessage } from "@/services/authService";
 
 export const AlertCard: React.FC = () => {
@@ -10,16 +10,14 @@ export const AlertCard: React.FC = () => {
   const [filterSeverity, setFilterSeverity] = useState<string>("ALL");
   const [liveBroadcasts, setLiveBroadcasts] = useState<EmergencyBroadcastMessage[]>([]);
 
-  // Default fallback broadcast alerts with explicit WHERE and WHAT HAPPENED details
+  // Default fallback broadcast alerts
   const defaultAlerts: EmergencyBroadcastMessage[] = [
     {
       id: "ALT-901",
-      title: "Flash Flood & High Surge Breach Warning",
+      title: "Flash Flood & High Surge Warning",
       category: "FLOOD",
       severity: "CRITICAL",
       affectedZone: "Coastal Sector 4 & Lowland Basins",
-      exactLocation: "Coastal Highway Gate #3, Sector 4 Lowland Basin (Lat 13.0827° N, Lng 80.2707° E)",
-      incidentDetails: "Heavy monsoonal surge breached sea wall gates causing 4-ft sudden water rise across residential blocks.",
       radius: "5.2 Miles Radius",
       instruction: "Move immediately to higher ground. Evacuation Shelters #1 & #3 are actively taking in residents.",
       dispatchedByEmail: "eoc@rescueai.gov.in",
@@ -28,12 +26,10 @@ export const AlertCard: React.FC = () => {
     },
     {
       id: "ALT-884",
-      title: "Severe Heatwave & Power Grid Stress Advisory",
+      title: "Severe Heatwave & Grid Stress Advisory",
       category: "HEATWAVE",
       severity: "WARNING",
       affectedZone: "Inland Metropolitan Grid",
-      exactLocation: "Metropolitan District Center, Grid Substation #14",
-      incidentDetails: "Substation transformer overload causing rolling power outages amidst 43°C peak heat.",
       radius: "12 Miles Radius",
       instruction: "Stay hydrated. Community Cooling Nodes are open at City Center Arena.",
       dispatchedByEmail: "met@rescueai.gov.in",
@@ -125,7 +121,7 @@ export const AlertCard: React.FC = () => {
           return (
             <div
               key={alt.id}
-              className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5 hover:bg-white hover:shadow-md transition-all duration-200"
+              className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2 hover:bg-white hover:shadow-md transition-all duration-200"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -137,34 +133,12 @@ export const AlertCard: React.FC = () => {
                 </span>
               </div>
 
-              {/* WHAT HAPPENED SECTION */}
-              <div className="p-2.5 bg-red-50/60 border border-red-100 rounded-xl text-xs space-y-1">
-                <div className="flex items-center gap-1.5 text-red-800 font-extrabold text-[11px]">
-                  <Info className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                  <span>🚨 WHAT HAPPENED:</span>
-                </div>
-                <p className="text-[11px] text-slate-800 font-medium leading-relaxed">
-                  {alt.incidentDetails || alt.instruction}
-                </p>
-              </div>
+              <p className="text-xs text-slate-700 font-medium">{alt.instruction}</p>
 
-              {/* WHERE IT HAPPENED (EXACT LOCATION SECTION) */}
-              <div className="p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-xs space-y-1">
-                <div className="flex items-center gap-1.5 text-blue-900 font-extrabold text-[11px]">
-                  <MapPin className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                  <span>📍 EXACT LOCATION (WHERE):</span>
-                </div>
-                <p className="text-[11px] text-blue-950 font-bold leading-relaxed">
-                  {alt.exactLocation || alt.affectedZone} ({alt.radius})
-                </p>
-              </div>
-
-              <p className="text-xs text-slate-700 font-medium pt-1">
-                <strong>Directive:</strong> {alt.instruction}
-              </p>
-
-              <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-200/60">
-                <span>Sender: <strong>{alt.dispatchedByName}</strong></span>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-1">
+                <span>
+                  Zone: <strong className="text-slate-900 font-bold">{alt.affectedZone}</strong> ({alt.radius})
+                </span>
                 <span>{new Date(alt.timestamp).toLocaleTimeString()}</span>
               </div>
             </div>
@@ -174,4 +148,3 @@ export const AlertCard: React.FC = () => {
     </motion.div>
   );
 };
-

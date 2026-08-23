@@ -127,12 +127,12 @@ export const OfflineEmergencyBot: React.FC = () => {
         setLoading(false);
       }, 500);
     } else {
-      // Online mode: Call local Next.js API route powered by Gemini
+      // Online mode: Call Render Gemini AI backend or fallback
       try {
-        const res = await fetch("/api/chat", {
+        const res = await fetch("https://rescueai-backend-3u2o.onrender.com/api/v1/triage/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: textToProcess }),
+          body: JSON.stringify({ description: textToProcess, location: "Grid Vector" }),
         });
 
         if (res.ok) {
@@ -140,7 +140,7 @@ export const OfflineEmergencyBot: React.FC = () => {
           const botMsg: ChatMessage = {
             id: "bot-" + Date.now(),
             sender: "bot",
-            text: data.reply || "I am currently overloaded. Please seek high ground and press SOS.",
+            text: `[ONLINE GEMINI AI TRIAGE]\nPriority: ${data.priority || "HIGH"}\nCategory: ${data.category || "GENERAL"}\nDirectives: ${data.recommendations || "Proceed to safety."}`,
             timestamp: new Date().toLocaleTimeString(),
             isOfflineMode: false,
           };

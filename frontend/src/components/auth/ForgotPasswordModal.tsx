@@ -47,8 +47,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         message: `6-Digit Reset Verification Code dispatched to ${cleanEmail}! Please check your inbox.`,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to dispatch reset code. Please try again.";
-      setStatus({ type: "error", message });
+      setStatus({ type: "error", message: "Failed to dispatch reset code. Please try again." });
     } finally {
       setLoading(false);
     }
