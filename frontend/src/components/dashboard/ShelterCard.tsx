@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building, MapPin, CheckCircle2, ArrowRight, X, Printer, Download } from "lucide-react";
+import { Building, MapPin, CheckCircle2, ArrowRight, X } from "lucide-react";
 import { bookShelterSpotInFirestore, ShelterBookingRecord } from "@/services/authService";
-import { ShelterInvoiceModal } from "./ShelterInvoiceModal";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ShelterItem {
@@ -18,66 +17,46 @@ interface ShelterItem {
   facilities: string[];
 }
 
-const DEFAULT_SHELTERS: ShelterItem[] = [
-  {
-    id: "shelter-01",
-    name: "Central Evacuation Relief Shelter",
-    address: "102 Disaster Response Ave, Sector 4",
-    distance: "0.8 miles away",
-    capacity: 250,
-    occupied: 185,
-    phone: "+91 98765 11223",
-    facilities: ["Food & Clean Water", "Medical Node", "Backup Generator", "Pet Safe Zone"],
-  },
-  {
-    id: "shelter-02",
-    name: "St. Jude Community Arena",
-    address: "405 High Street, Downtown",
-    distance: "1.4 miles away",
-    capacity: 500,
-    occupied: 310,
-    phone: "+91 98765 44332",
-    facilities: ["Red Cross Paramedics", "Infant Care", "Evacuation Shuttles"],
-  },
-  {
-    id: "shelter-03",
-    name: "North Grid High School Complex",
-    address: "88 Coastal Highway, Bay Area",
-    distance: "2.1 miles away",
-    capacity: 350,
-    occupied: 120,
-    phone: "+91 98765 99887",
-    facilities: ["Helipad Access", "Emergency Kitchen", "Sanitation Kits"],
-  },
-];
-
 export const ShelterCard: React.FC = () => {
   const { userProfile } = useAuth();
-  const [shelters, setShelters] = useState<ShelterItem[]>(DEFAULT_SHELTERS);
   const [selectedShelter, setSelectedShelter] = useState<ShelterItem | null>(null);
   const [evacueeCount, setEvacueeCount] = useState<number>(1);
   const [specialAssistance, setSpecialAssistance] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [activeBooking, setActiveBooking] = useState<ShelterBookingRecord | null>(null);
-  const [isInvoiceOpen, setIsInvoiceOpen] = useState<boolean>(false);
-  const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(false);
 
-  // Load persistent shelter occupancy state from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("rescueai_shelters_state");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as ShelterItem[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setShelters(parsed);
-          }
-        } catch (e) {
-          console.warn("Shelter state load error:", e);
-        }
-      }
-    }
-  }, []);
+  const shelters: ShelterItem[] = [
+    {
+      id: "shelter-01",
+      name: "Central Evacuation Relief Shelter",
+      address: "102 Disaster Response Ave, Sector 4",
+      distance: "0.8 miles away",
+      capacity: 250,
+      occupied: 185,
+      phone: "+91 98765 11223",
+      facilities: ["Food & Clean Water", "Medical Node", "Backup Generator", "Pet Safe Zone"],
+    },
+    {
+      id: "shelter-02",
+      name: "St. Jude Community Arena",
+      address: "405 High Street, Downtown",
+      distance: "1.4 miles away",
+      capacity: 500,
+      occupied: 310,
+      phone: "+91 98765 44332",
+      facilities: ["Red Cross Paramedics", "Infant Care", "Evacuation Shuttles"],
+    },
+    {
+      id: "shelter-03",
+      name: "North Grid High School Complex",
+      address: "88 Coastal Highway, Bay Area",
+      distance: "2.1 miles away",
+      capacity: 350,
+      occupied: 120,
+      phone: "+91 98765 99887",
+      facilities: ["Helipad Access", "Emergency Kitchen", "Sanitation Kits"],
+    },
+  ];
 
   const handleConfirmBooking = async () => {
     if (!selectedShelter) return;
@@ -91,24 +70,7 @@ export const ShelterCard: React.FC = () => {
         evacueeCount: evacueeCount,
         specialAssistance: specialAssistance,
       });
-
-      // Update local reactive occupancy state (decrement remaining spots in real-time)
-      const updatedList = shelters.map((item) => {
-        if (item.id === selectedShelter.id) {
-          const newOccupied = Math.min(item.capacity, item.occupied + evacueeCount);
-          return { ...item, occupied: newOccupied };
-        }
-        return item;
-      });
-
-      setShelters(updatedList);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("rescueai_shelters_state", JSON.stringify(updatedList));
-      }
-
       setActiveBooking(receipt);
-      setIsBannerDismissed(false);
-      setIsInvoiceOpen(true); // Automatically open printable pass modal
     } catch (e) {
       console.warn("Booking error:", e);
     } finally {
@@ -118,51 +80,25 @@ export const ShelterCard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Active Booking Compact Banner with Instant Dismiss */}
-      {activeBooking && !isBannerDismissed && (
+      {/* Active Booking Confirmation Card */}
+      {activeBooking && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, height: 0 }}
-          className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2.5 shadow-sm relative"
+          className="p-5 bg-emerald-50 border border-emerald-200 rounded-3xl space-y-3 shadow-sm"
         >
-          <button
-            onClick={() => setIsBannerDismissed(true)}
-            className="absolute top-3 right-3 p-1 text-emerald-700 hover:text-emerald-950 rounded-lg hover:bg-emerald-100 transition-colors"
-            title="Dismiss notification to save space"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
-          <div className="flex items-center justify-between pr-8">
-            <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-xs">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-sm">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               <span>Evacuation Spot Confirmed!</span>
             </div>
-            <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-mono font-bold text-[10px] rounded-full">
-              #{activeBooking.bookingId}
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-mono font-bold text-xs rounded-full">
+              Receipt #{activeBooking.bookingId}
             </span>
           </div>
-
-          <p className="text-xs text-emerald-800 font-medium">
-            Reserved spot for <strong>{activeBooking.evacueeCount} evacuee(s)</strong> at <strong>{activeBooking.shelterName}</strong>.
+          <p className="text-xs text-emerald-700 font-medium">
+            Reserved spot for <strong>{activeBooking.evacueeCount} evacuee(s)</strong> at <strong>{activeBooking.shelterName}</strong>. Show this receipt upon arrival for instant check-in.
           </p>
-
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={() => setIsInvoiceOpen(true)}
-              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] rounded-xl flex items-center gap-1.5 transition-colors shadow-xs uppercase tracking-wider"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>View &amp; Download Printable Pass</span>
-            </button>
-            <button
-              onClick={() => setIsBannerDismissed(true)}
-              className="px-3 py-1.5 bg-emerald-100 text-emerald-900 font-bold text-[11px] rounded-xl hover:bg-emerald-200 transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
         </motion.div>
       )}
 
@@ -175,7 +111,7 @@ export const ShelterCard: React.FC = () => {
             </div>
             <div>
               <h3 className="text-base font-black text-slate-900">Verified Evacuation Relief Shelters</h3>
-              <p className="text-xs text-slate-500 font-medium">Real-Time Capacity &amp; Instant Spot Reservations</p>
+              <p className="text-xs text-slate-500 font-medium">Real-Time Occupancy &amp; Evacuation Spot Reservations</p>
             </div>
           </div>
           <span className="px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-full">
@@ -186,7 +122,7 @@ export const ShelterCard: React.FC = () => {
         {/* Shelter Cards List */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {shelters.map((shelter) => {
-            const openSpots = Math.max(0, shelter.capacity - shelter.occupied);
+            const openSpots = shelter.capacity - shelter.occupied;
             const pct = Math.round((shelter.occupied / shelter.capacity) * 100);
 
             return (
@@ -211,18 +147,16 @@ export const ShelterCard: React.FC = () => {
 
                   <p className="text-[11px] text-slate-500 font-medium">{shelter.distance}</p>
 
-                  {/* Real-time Occupancy Meter & Dynamic Remaining Spots */}
+                  {/* Occupancy Meter */}
                   <div className="space-y-1.5 pt-1">
                     <div className="flex justify-between text-[11px] font-bold text-slate-700">
                       <span>Occupancy ({pct}%)</span>
-                      <span className={openSpots > 0 ? "text-emerald-700 font-black animate-pulse" : "text-red-600 font-black"}>
-                        {openSpots > 0 ? `${openSpots} Spots Left` : "FULL CAPACITY"}
-                      </span>
+                      <span className="text-emerald-700">{openSpots} Spots Left</span>
                     </div>
                     <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          pct >= 90 ? "bg-red-600" : pct > 75 ? "bg-amber-500" : "bg-emerald-500"
+                          pct > 80 ? "bg-amber-500" : "bg-emerald-500"
                         }`}
                         style={{ width: `${pct}%` }}
                       />
@@ -244,10 +178,9 @@ export const ShelterCard: React.FC = () => {
 
                 <button
                   onClick={() => setSelectedShelter(shelter)}
-                  disabled={openSpots <= 0}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 uppercase disabled:cursor-not-allowed"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 uppercase"
                 >
-                  <span>{openSpots > 0 ? "Book Evacuation Spot" : "Shelter Full"}</span>
+                  <span>Book Evacuation Spot</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -256,7 +189,7 @@ export const ShelterCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Booking Form Modal */}
+      {/* Booking Modal */}
       <AnimatePresence>
         {selectedShelter && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
@@ -279,9 +212,7 @@ export const ShelterCard: React.FC = () => {
               <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl space-y-1">
                 <h4 className="text-xs font-black text-blue-950">{selectedShelter.name}</h4>
                 <p className="text-[11px] text-blue-800">{selectedShelter.address}</p>
-                <p className="text-[10px] text-blue-600 font-bold">
-                  Remaining Capacity: {selectedShelter.capacity - selectedShelter.occupied} Spots Available
-                </p>
+                <p className="text-[10px] text-blue-600 font-bold">{selectedShelter.distance}</p>
               </div>
 
               <div className="space-y-4">
@@ -329,21 +260,13 @@ export const ShelterCard: React.FC = () => {
                   disabled={loading}
                   className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md uppercase tracking-wider"
                 >
-                  {loading ? "Reserving..." : "Confirm Reservation"}
+                  Confirm Reservation
                 </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
-      {/* Printable Evacuation Pass & Invoice Modal */}
-      <ShelterInvoiceModal
-        booking={activeBooking}
-        isOpen={isInvoiceOpen}
-        onClose={() => setIsInvoiceOpen(false)}
-      />
     </div>
   );
 };
-

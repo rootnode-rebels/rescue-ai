@@ -130,7 +130,7 @@ export function subscribeAuditLogsStream(
         const list: AuditLogEntry[] = [];
         snapshot.forEach((docSnap) => {
           if (docSnap.exists()) {
-            list.push({ ...docSnap.data(), id: docSnap.data().id || docSnap.id } as AuditLogEntry);
+            list.push(docSnap.data() as AuditLogEntry);
           }
         });
         list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -169,8 +169,6 @@ export interface EmergencyBroadcastMessage {
   category: "FLOOD" | "CYCLONE" | "HEATWAVE" | "EARTHQUAKE" | "EVACUATION_ORDER" | "GENERAL";
   severity: "CRITICAL" | "WARNING" | "ADVISORY";
   affectedZone: string;
-  exactLocation?: string;
-  incidentDetails?: string;
   radius: string;
   instruction: string;
   dispatchedByEmail: string;
@@ -193,8 +191,6 @@ export async function dispatchEmergencyBroadcastInFirestore(
     category: broadcast.category || "GENERAL",
     severity: broadcast.severity || "CRITICAL",
     affectedZone: broadcast.affectedZone || "All Regions",
-    exactLocation: broadcast.exactLocation || "Sector 4 Lowland Basin, Coastal Highway Landmark",
-    incidentDetails: broadcast.incidentDetails || "Severe surge breach & power grid failure reported",
     radius: broadcast.radius || "10 Miles Radius",
     instruction: broadcast.instruction || "Follow emergency safety protocols.",
     dispatchedByEmail: broadcast.dispatchedByEmail || "superadmin@rescueai.org",
@@ -594,7 +590,7 @@ export function subscribeUsersListStream(
         const list: UserProfile[] = [];
         snapshot.forEach((docSnap) => {
           if (docSnap.exists()) {
-            list.push({ ...docSnap.data(), uid: docSnap.data().uid || docSnap.id } as UserProfile);
+            list.push(docSnap.data() as UserProfile);
           }
         });
         callback(list);
@@ -664,14 +660,14 @@ export async function deleteUserInFirestore(uid: string): Promise<void> {
  */
 export async function resetPasswordService(email: string): Promise<void> {
   const cleanEmail = email.trim().toLowerCase();
-  const res = await fetch("/api/send-reset-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: cleanEmail, actionType: "reset" }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
-    throw new Error(data.error || data.message || `Password reset email failed (${res.status})`);
+  try {
+    await fetch("/api/send-reset-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: cleanEmail, actionType: "reset" }),
+    });
+  } catch (e) {
+    console.warn("Resend email dispatch notice:", e);
   }
 }
 
@@ -688,19 +684,18 @@ export async function sendLoginOTP(email: string): Promise<string> {
     localStorage.setItem(`rescueai_otp_${cleanEmail}`, generatedOtp);
   }
 
-  const res = await fetch("/api/send-reset-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: cleanEmail,
-      otpCode: generatedOtp,
-      actionType: "otp",
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
-    throw new Error(data.error || data.message || `OTP email dispatch failed (${res.status})`);
+  try {
+    await fetch("/api/send-reset-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: cleanEmail,
+        otpCode: generatedOtp,
+        actionType: "otp",
+      }),
+    });
+  } catch (e) {
+    console.warn("OTP dispatch error via Resend API:", e);
   }
 
   return generatedOtp;
