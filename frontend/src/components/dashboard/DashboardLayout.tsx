@@ -12,15 +12,18 @@ import { RequestCard } from "./RequestCard";
 import { AlertCard } from "./AlertCard";
 import { ShelterCard } from "./ShelterCard";
 import { EmergencyGuideTab } from "./EmergencyGuideTab";
+import { MeshChatView } from "./MeshChatView";
+import { FMRadioView } from "./FMRadioView";
+import { SocialPreviewHub } from "./SocialPreviewHub";
 import { CitizenSOSTrackerWithNotifications } from "./CitizenSOSTrackerWithNotifications";
 import { ProfileSettingsTab } from "./ProfileSettingsTab";
 import { useAuth } from "@/hooks/useAuth";
 
 export const DashboardLayout: React.FC = () => {
   const { userProfile } = useAuth();
-  const [activeView, setActiveView] = useState<DashboardViewMode>("dashboard");
+  const [activeView, setActiveView] = useState<DashboardViewMode | "mesh-chat" | "fm-radio">("dashboard");
 
-  const handleSelectView = (view: DashboardViewMode) => {
+  const handleSelectView = (view: DashboardViewMode | "mesh-chat" | "fm-radio") => {
     setActiveView(view);
   };
 
@@ -38,29 +41,38 @@ export const DashboardLayout: React.FC = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl w-full mx-auto">
-          {/* View Filter Pill Bar */}
-          <div className="flex items-center gap-2 pb-3 overflow-x-auto no-scrollbar border-b border-slate-200">
-            {[
-              { id: "dashboard", label: "Dashboard Overview" },
-              { id: "my-requests", label: "My Requests" },
-              { id: "shelters", label: "Nearby Shelters" },
-              { id: "alerts", label: "Live Alerts" },
-              { id: "guide", label: "Emergency Guide" },
-              { id: "profile", label: "My Profile" },
-              { id: "settings", label: "Settings" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleSelectView(tab.id as DashboardViewMode)}
-                className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
-                  activeView === tab.id
-                    ? "bg-red-600 text-white shadow-md shadow-red-950"
-                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* View Filter Pill Bar & Social Share Hub */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto">
+              {[
+                { id: "dashboard", label: "Dashboard Overview" },
+                { id: "my-requests", label: "My Requests" },
+                { id: "shelters", label: "Nearby Shelters" },
+                { id: "alerts", label: "Live Alerts" },
+                { id: "guide", label: "Emergency Guide" },
+                { id: "mesh-chat", label: "Offline Mesh Chat" },
+                { id: "fm-radio", label: "Hardware FM Radio" },
+                { id: "profile", label: "My Profile" },
+                { id: "settings", label: "Settings" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleSelectView(tab.id as DashboardViewMode)}
+                  className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all ${
+                    activeView === tab.id
+                      ? "bg-red-600 text-white shadow-md shadow-red-950"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Social Share Hub Trigger Button */}
+            <div className="shrink-0">
+              <SocialPreviewHub />
+            </div>
           </div>
 
           {/* Citizen Live Push Notification & Incident Tracker */}
@@ -117,6 +129,8 @@ export const DashboardLayout: React.FC = () => {
           {activeView === "shelters" && <ShelterCard />}
           {activeView === "alerts" && <AlertCard />}
           {activeView === "guide" && <EmergencyGuideTab />}
+          {activeView === "mesh-chat" && <MeshChatView />}
+          {activeView === "fm-radio" && <FMRadioView />}
           {activeView === "profile" && <ProfileSettingsTab mode="profile" />}
           {activeView === "settings" && <ProfileSettingsTab mode="settings" />}
         </main>
@@ -124,3 +138,4 @@ export const DashboardLayout: React.FC = () => {
     </div>
   );
 };
+
