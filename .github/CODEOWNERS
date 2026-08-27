@@ -1,0 +1,5 @@
+# RescueAI Code Owners
+# The last matching rule takes precedence, so we combine all required reviewers onto a single global rule.
+
+# All PRs will automatically request reviews from both the Approvers and the Code Reviewers groups.
+* @developeradhi @jeevanhso6 @suhashoskere @theakashr @theakshath @developerakashp
