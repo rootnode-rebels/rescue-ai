@@ -17,6 +17,7 @@ import {
   LogOut,
   Radio,
   Shield,
+  WifiOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -27,6 +28,8 @@ export type DashboardViewMode =
   | "shelters"
   | "my-requests"
   | "guide"
+  | "mesh-chat"
+  | "fm-radio"
   | "alerts"
   | "profile"
   | "settings"
@@ -89,6 +92,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView = "dashboard", onSe
       label: "Emergency Guide",
       icon: BookOpen,
       href: "/dashboard#guide",
+    },
+    {
+      id: "mesh-chat",
+      label: "Offline Mesh Chat",
+      icon: WifiOff,
+      href: "/dashboard#mesh-chat",
+      badge: "P2P",
+    },
+    {
+      id: "fm-radio",
+      label: "Hardware FM Radio",
+      icon: Radio,
+      href: "/dashboard#fm-radio",
+      badge: "OFFLINE",
     },
     {
       id: "profile",
