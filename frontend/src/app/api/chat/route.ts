@@ -13,7 +13,27 @@ Follow these strict rules:
 
 When users ask for a shelter, ask for their current general location and specify that they can book a spot instantly from the RescueAI dashboard.";
 
+const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
+
 export async function POST(req: Request) {
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const limit = 5; // 5 requests per minute
+
+  const currentRate = rateLimitMap.get(ip) || { count: 0, resetTime: now + windowMs };
+  if (now > currentRate.resetTime) {
+    currentRate.count = 1;
+    currentRate.resetTime = now + windowMs;
+  } else {
+    currentRate.count++;
+  }
+  rateLimitMap.set(ip, currentRate);
+
+  if (currentRate.count > limit) {
+    return NextResponse.json({ reply: "?? Rate limit exceeded. Please wait a moment before sending another message." }, { status: 429 });
+  }
+
   try {
     const { message } = await req.json();
 
@@ -40,3 +60,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
   }
 }
+
+

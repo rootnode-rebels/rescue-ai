@@ -8,6 +8,7 @@ import {
   sendPasswordResetEmail,
   setPersistence,
   browserLocalPersistence,
+  sendEmailVerification,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -381,6 +382,15 @@ export async function registerWithEmail(data: RegisterFormData): Promise<UserPro
   const user = userCredential.user;
   await updateProfile(user, { displayName: data.name }).catch(() => {});
 
+  // Send Email Verification
+  await sendEmailVerification(user).catch((err) => console.warn("Failed to send verification email", err));
+
+  // Store session token in localStorage for client-side explicit check (though Firebase persists it automatically)
+  const token = await user.getIdToken();
+  if (typeof window !== "undefined") {
+    localStorage.setItem("rescueai_session_token", token);
+  }
+
   const newProfile: UserProfile = {
     uid: user.uid,
     name: data.name,
@@ -426,6 +436,12 @@ export async function loginWithEmail(data: LoginFormData): Promise<UserProfile> 
 
   const user = userCredential.user;
   const now = new Date().toISOString();
+
+  // Store session token in localStorage for client-side explicit check (though Firebase persists it automatically)
+  const token = await user.getIdToken();
+  if (typeof window !== "undefined") {
+    localStorage.setItem("rescueai_session_token", token);
+  }
 
   let profile = await getUserProfile(user.uid);
 

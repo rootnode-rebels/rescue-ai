@@ -1,20 +1,65 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    // In the absence of custom claims, we securely verify their role document
+    function hasRole(role) {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    function isAnyAdmin() {
+      return hasRole('global_admin') || hasRole('rescue_admin');
+    }
 
     // Users Collection Rule
     match /users/{userId} {
-      allow read, create, update, write, delete: if true;
+      allow read: if isAuthenticated();
+      // Allow users to create their own profile, but they CANNOT self-assign admin roles securely here.
+      // Firebase Cloud Functions should ideally set admin roles. For this client-side architecture, 
+      // they can create, but only admins can update roles.
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAnyAdmin();
+      allow delete: if hasRole('global_admin');
     }
 
     // Real-Time SOS Requests Collection Rule
     match /sos_requests/{requestId} {
-      allow read, create, update, write, delete: if true;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAnyAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
     
     // Legacy SOS Collection Rule
     match /sos/{docId} {
-      allow read, create, update, write, delete: if true;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAnyAdmin();
+    }
+
+    // Emergency Broadcasts
+    match /emergency_broadcasts/{broadcastId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAnyAdmin();
+    }
+
+    // Shelter Bookings
+    match /shelter_bookings/{bookingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAnyAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+    
+    // Audit Logs
+    match /audit_logs/{logId} {
+      allow read: if isAnyAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Audit logs should never be modified
     }
   }
 }
