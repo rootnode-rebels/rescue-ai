@@ -20,11 +20,13 @@ service cloud.firestore {
     // Users Collection Rule
     match /users/{userId} {
       allow read: if isAuthenticated();
-      // Allow users to create their own profile, but they CANNOT self-assign admin roles securely here.
-      // Firebase Cloud Functions should ideally set admin roles. For this client-side architecture, 
-      // they can create, but only admins can update roles.
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAnyAdmin();
+      
+      // [DB-001 FIX] Prevent privilege escalation during registration
+      allow create: if isOwner(userId) && request.resource.data.role == 'citizen';
+      
+      // [DB-001 FIX] Users can update their profile but CANNOT modify their own role. Only admins can change roles.
+      allow update: if isAnyAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+      
       allow delete: if hasRole('global_admin');
     }
 
@@ -58,7 +60,8 @@ service cloud.firestore {
     // Audit Logs
     match /audit_logs/{logId} {
       allow read: if isAnyAdmin();
-      allow create: if isAuthenticated();
+      // [DB-004 FIX] Prevent Audit Log Forgery by enforcing identity match
+      allow create: if isAuthenticated() && request.resource.data.actorEmail == request.auth.token.email;
       allow update, delete: if false; // Audit logs should never be modified
     }
   }

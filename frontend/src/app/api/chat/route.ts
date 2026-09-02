@@ -15,6 +15,16 @@ When users ask for a shelter, ask for their current general location and specify
 
 const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
 
+// Periodically clean up the rate limit map to prevent unbounded memory growth (Copilot Fix)
+if (globalThis.rateLimitInterval === undefined) {
+  globalThis.rateLimitInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, data] of rateLimitMap.entries()) {
+      if (now > data.resetTime) rateLimitMap.delete(ip);
+    }
+  }, 60 * 1000);
+}
+
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
   const now = Date.now();
