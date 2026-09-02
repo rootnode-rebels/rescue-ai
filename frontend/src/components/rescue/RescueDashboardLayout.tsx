@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../dashboard/Sidebar";
+import { BottomMobileNav } from "../dashboard/BottomMobileNav";
 import {
   Ambulance,
   CheckCircle2,
@@ -100,126 +101,16 @@ export const RescueDashboardLayout: React.FC = () => {
       {/* Permanent Left Sidebar */}
       <div className="hidden lg:block">
         <Sidebar activeView="rescue-dashboard" onSelectView={() => {}} />
-      </div>
-
-      {/* Main Tactical Container */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Navbar */}
-        <div className="bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-600/20 border border-red-500/30 text-red-500 rounded-xl animate-pulse">
-              <Radio className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-white flex items-center gap-2">
-                <span>NDRF Rescue Command Operations Console</span>
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-bold text-[10px] rounded-full">
-                  RESCUE OPERATOR ACTIVE
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400 font-medium">
-                Live Telemetry &amp; Incident Triage Stream • Synced at {lastSyncedTime || "Just Now"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <a
-              href={getGoogleMapsUrl(baseLat, baseLng)}
-              target="_blank"
-              rel="noreferrer"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-red-400 font-mono hover:text-white transition-colors"
-            >
-              <Compass className="w-4 h-4 text-blue-400" />
-              <span>Base Grid: 12.97° N, 77.59° E (Open Maps)</span>
-            </a>
-            <button
-              onClick={() => logout()}
-              className="px-3.5 py-2 bg-red-950/60 hover:bg-red-900 text-red-400 border border-red-800/60 rounded-xl text-xs font-extrabold transition-all"
-            >
-              Log Out
-            </button>
+                  </div>
           </div>
         </div>
+      </div>
+      <div className="block lg:hidden">
+        <BottomMobileNav activeView="rescue-dashboard" onSelectView={() => {}} />
+      </div>
+    </div>
+  );
 
-        {/* Dashboard Main View Area */}
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
-          {/* Tactical Stats Header */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
-              <div className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-white">{criticalCount}</p>
-                <p className="text-xs text-slate-400 font-semibold">Critical Priority SOS</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
-              <div className="p-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl">
-                <Ambulance className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-white">{inProgressCount}</p>
-                <p className="text-xs text-slate-400 font-semibold">Squads En Route</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-white">{resolvedCount}</p>
-                <p className="text-xs text-slate-400 font-semibold">Resolved Rescues</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl flex items-center gap-4">
-              <div className="p-3 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-white">{requests.length}</p>
-                <p className="text-xs text-slate-400 font-semibold">Total Grid Incidents</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Priority Filters */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((prio) => (
-                <button
-                  key={prio}
-                  onClick={() => setFilterPriority(prio)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    filterPriority === prio
-                      ? "bg-red-600 text-white shadow-md shadow-red-950"
-                      : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
-                  }`}
-                >
-                  {prio}
-                </button>
-              ))}
-            </div>
-            <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-              Streaming {filteredRequests.length} Verified Grid Incidents
-            </span>
-          </div>
-
-          {/* Incidents Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Queue List (7 Cols) */}
-            <div className="lg:col-span-7 space-y-4">
-              {filteredRequests.length === 0 ? (
-                <div className="p-12 text-center bg-slate-950/60 border border-slate-800 rounded-3xl text-slate-500 text-xs font-mono">
-                  No active incidents matching selected priority filter.
-                </div>
-              ) : (
-                filteredRequests.map((req) => {
-                  const dist = getDistanceMiles(req.latitude, req.longitude);
                   const selectedSquad = squadAssignments[req.requestId] || req.assignedTeamName || availableSquads[0];
                   const status = req.status;
 

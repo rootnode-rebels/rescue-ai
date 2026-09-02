@@ -5,6 +5,7 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { SOSFirestoreRequest, SOSStatus, SOSPriority } from "@/types/auth";
@@ -120,10 +121,10 @@ export async function syncOfflineSOSQueueToFirestore(): Promise<number> {
     let syncedCount = 0;
     for (const record of queue) {
       const recordToSync = { ...record, isOfflineCreated: false, updatedAt: new Date().toISOString() };
-      await Promise.all([
-        setDoc(doc(db, SOS_COLLECTION_1, record.requestId), recordToSync).catch(() => {}),
-        setDoc(doc(db, SOS_COLLECTION_2, record.requestId), recordToSync).catch(() => {}),
-      ]);
+      const batch = writeBatch(db);
+batch.set(doc(db, SOS_COLLECTION_1, record.requestId), recordToSync);
+batch.set(doc(db, SOS_COLLECTION_2, record.requestId), recordToSync);
+await batch.commit().catch(() => {});
       syncedCount++;
     }
 
@@ -181,12 +182,10 @@ export async function createSOSRequestInFirestore(
 
   // Asynchronously dispatch to Firestore collections in background without blocking UI
   if (typeof window !== "undefined" && navigator.onLine) {
-    Promise.all([
-      setDoc(doc(db, SOS_COLLECTION_1, requestId), fullRecord),
-      setDoc(doc(db, SOS_COLLECTION_2, requestId), fullRecord),
-    ]).catch((err) => {
-      console.warn("Firestore dual write notice (Saved Offline):", err);
-    });
+    const batch = writeBatch(db);
+batch.set(doc(db, SOS_COLLECTION_1, requestId), fullRecord);
+batch.set(doc(db, SOS_COLLECTION_2, requestId), fullRecord);
+batch.commit().catch((err) => console.warn("Firestore dual write notice", err));
   }
 
   return fullRecord;
@@ -215,10 +214,10 @@ export async function updateSOSLocationInFirestore(
     }
 
     if (navigator.onLine) {
-      await Promise.all([
-        updateDoc(doc(db, SOS_COLLECTION_1, requestId), updateData).catch(() => {}),
-        updateDoc(doc(db, SOS_COLLECTION_2, requestId), updateData).catch(() => {}),
-      ]);
+      const batch = writeBatch(db);
+batch.update(doc(db, SOS_COLLECTION_1, requestId), updateData);
+batch.update(doc(db, SOS_COLLECTION_2, requestId), updateData);
+await batch.commit().catch(() => {});
     }
   } catch (err) {
     console.warn("Could not update live GPS in Firestore:", err);
@@ -250,10 +249,10 @@ export async function updateSOSStatusInFirestore(
     }
 
     if (navigator.onLine) {
-      await Promise.all([
-        updateDoc(doc(db, SOS_COLLECTION_1, requestId), updateData).catch(() => {}),
-        updateDoc(doc(db, SOS_COLLECTION_2, requestId), updateData).catch(() => {}),
-      ]);
+      const batch = writeBatch(db);
+batch.update(doc(db, SOS_COLLECTION_1, requestId), updateData);
+batch.update(doc(db, SOS_COLLECTION_2, requestId), updateData);
+await batch.commit().catch(() => {});
     }
   } catch (err) {
     console.warn("Error updating status in Firestore:", err);
@@ -274,10 +273,10 @@ export async function deleteSOSRequestInFirestore(requestId: string): Promise<vo
     }
 
     if (navigator.onLine) {
-      await Promise.all([
-        deleteDoc(doc(db, SOS_COLLECTION_1, requestId)).catch(() => {}),
-        deleteDoc(doc(db, SOS_COLLECTION_2, requestId)).catch(() => {}),
-      ]);
+      const batch = writeBatch(db);
+batch.delete(doc(db, SOS_COLLECTION_1, requestId));
+batch.delete(doc(db, SOS_COLLECTION_2, requestId));
+await batch.commit().catch(() => {});
     }
   } catch (err) {
     console.warn("Error deleting SOS request from Firestore:", err);
@@ -413,3 +412,4 @@ export function subscribeUserActiveSOS(
     return () => {};
   }
 }
+

@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Smartphone, Download } from "lucide-react";
 import { Sidebar, DashboardViewMode } from "./Sidebar";
+import { BottomMobileNav } from "./BottomMobileNav";
+import { BottomMobileNav } from "./BottomMobileNav";
 import { TopNavbar } from "./TopNavbar";
 import { StatsCard } from "./StatsCard";
 import { SOSCard } from "./SOSCard";
@@ -135,7 +137,11 @@ export const DashboardLayout: React.FC = () => {
           {activeView === "settings" && <ProfileSettingsTab mode="settings" />}
         </main>
       </div>
+      <div className="block lg:hidden">
+        <BottomMobileNav activeView={activeView as any} onSelectView={handleSelectView as any} />
+      </div>
     </div>
   );
+
 };
 

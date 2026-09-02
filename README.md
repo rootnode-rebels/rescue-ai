@@ -4,7 +4,6 @@
 > **Tagline**: Offline-First AI-Powered Disaster Response & Emergency Coordination Ecosystem  
 > **Production Live Web App**: [https://rescueai-ai.vercel.app](https://rescueai-ai.vercel.app)  
 > **App Download Center**: [https://rescueai-ai.vercel.app/download](https://rescueai-ai.vercel.app/download)  
-> **Presentation (.pptx)**: [RescueAI_Innovative_Pitch_Deck.pptx](file:///C:/Users/Akash%20R/.gemini/antigravity/brain/ea4b2c03-bce6-4bdd-8392-7bec98df18c6/scratch/RescueAI_Innovative_Pitch_Deck.pptx)  
 
 ---
 
@@ -108,8 +107,8 @@ flowchart TD
 ## 📱 Official Download & App Center
 - **Web App**: [https://rescueai-ai.vercel.app](https://rescueai-ai.vercel.app)
 - **APK Download**: [https://rescueai-ai.vercel.app/download](https://rescueai-ai.vercel.app/download)
-- **PowerPoint Presentation Deck**: [https://rescueai-ai.vercel.app/RescueAI_Innovative_Pitch_Deck.pptx](https://rescueai-ai.vercel.app/RescueAI_Innovative_Pitch_Deck.pptx)
 
 ---
 
 **Built with ❤️ for IEEE Hack Genesis 2026.**
+

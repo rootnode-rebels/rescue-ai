@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Minus, Compass, Radio, MapPin, Locate } from "lucide-react";
+import { Plus, Minus, Compass, Radio, Locate } from "lucide-react";
 import { subscribeLiveSOSQueue } from "@/services/sosService";
 import { SOSFirestoreRequest } from "@/types/auth";
 
@@ -171,4 +171,5 @@ export const MapCard: React.FC = () => {
     </motion.div>
   );
 };
+
 
