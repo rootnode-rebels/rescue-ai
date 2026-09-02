@@ -1,5 +1,9 @@
-# RescueAI Code Owners
-# The last matching rule takes precedence, so we combine all required reviewers onto a single global rule.
+﻿# RescueAI Code Owners
 
-# All PRs will automatically request reviews from both the Approvers and the Code Reviewers groups.
-* @developeradhi @jeevanhso6 @suhashoskere @theakashr @theakshath @developerakashp
+# Tier 1: Mandatory Code Reviewers
+# GitHub will automatically request reviews from these 3 members when a PR is opened.
+* @theakashr @theakshath @developerakashp
+
+# Tier 2: Final Approvers 
+# @developeradhi @suhashoskere @jeevanhs06 
+# (These members will manually approve/merge after the Tier 1 review is completed)
