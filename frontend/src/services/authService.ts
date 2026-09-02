@@ -249,7 +249,7 @@ export function subscribeEmergencyBroadcasts(
  * Books an Evacuation Spot at a Relief Shelter in Cloud Firestore.
  */
 export async function bookShelterSpotInFirestore(data: Partial<ShelterBookingRecord>): Promise<ShelterBookingRecord> {
-  const bookingId = "SHELTER-BOK-" + Math.floor(1000 + Math.random() * 9000);
+  const bookingId = "SHELTER-BOK-" + Date.now().toString(36).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 9000);
   const now = new Date().toISOString();
 
   const record: ShelterBookingRecord = {

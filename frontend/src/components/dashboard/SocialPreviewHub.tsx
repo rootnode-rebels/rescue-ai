@@ -23,7 +23,7 @@ export const SocialPreviewHub: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const emergencyUrl = "https://rescueai.org";
-  const shareText = "ðŸš¨ RescueAI Emergency Response Grid: Send 1-tap SOS distress signals, book evacuation shelters, and access offline emergency maps.";
+  const shareText = "🚨 RescueAI Emergency Response Grid: Send 1-tap SOS distress signals, book evacuation shelters, and access offline emergency maps.";
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${shareText}\n${emergencyUrl}`);
@@ -140,7 +140,7 @@ export const SocialPreviewHub: React.FC = () => {
                           <span className="text-xs font-black tracking-tight">RescueAI Portal</span>
                         </div>
                         <h4 className="text-xs font-bold leading-tight">
-                          RescueAI â€” AI Disaster Response &amp; Emergency Grid
+                          RescueAI — AI Disaster Response &amp; Emergency Grid
                         </h4>
                         <p className="text-[10px] text-slate-300 mt-1">rescueai.org</p>
                       </div>
@@ -150,7 +150,7 @@ export const SocialPreviewHub: React.FC = () => {
                       <a href={emergencyUrl} target="_blank" rel="noreferrer" className="text-xs text-emerald-700 font-bold underline mt-1 block">
                         https://rescueai.org
                       </a>
-                      <div className="text-[9px] text-slate-400 text-right mt-1 font-mono">10:42 PM âœ“âœ“</div>
+                      <div className="text-[9px] text-slate-400 text-right mt-1 font-mono">10:42 PM ✓✓</div>
                     </div>
                   </div>
                 )}
@@ -164,7 +164,7 @@ export const SocialPreviewHub: React.FC = () => {
                     <div className="bg-[#182533] rounded-2xl p-4 border-l-4 border-sky-500 max-w-lg space-y-2 shadow-lg">
                       <span className="text-[11px] font-bold text-sky-400">RescueAI Emergency Dispatch</span>
                       <h4 className="text-sm font-black text-white">
-                        RescueAI â€” National Emergency Response Engine
+                        RescueAI — National Emergency Response Engine
                       </h4>
                       <p className="text-xs text-slate-300 leading-relaxed font-normal">
                         {shareText}
@@ -192,7 +192,7 @@ export const SocialPreviewHub: React.FC = () => {
                         1-Tap Geolocation SOS Broadcast &amp; Evacuation Shelter Reservations
                       </p>
                       <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-slate-900 font-black text-xs rounded-full shadow-lg">
-                        <span>ðŸ”— rescueai.org/sos</span>
+                        <span>🔗 rescueai.org/sos</span>
                       </div>
                     </div>
                   </div>

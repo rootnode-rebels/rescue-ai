@@ -15,9 +15,9 @@
 ### ?? Testing & Verification
 <!-- How did you test these changes? Did you verify them in offline mode? -->
 - [ ] Tested locally via 
-pm run dev
+npm run dev
 - [ ] Passed production build check 
-pm run build
+npm run build
 - [ ] Verified Firebase Rules / Access Controls
 
 ### ????? Review & Approval Checklist
@@ -27,4 +27,5 @@ pm run build
 
 ### ?? Related Issues
 <!-- Link to any related issues (e.g., Fixes #123) -->
+
 
