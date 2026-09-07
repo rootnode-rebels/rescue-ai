@@ -1,6 +1,6 @@
 # 🆘 RescueAI — Autonomous Disaster Response & Civilian Survival Engine
 
-> **IEEE Hack Genesis 2026 Pitch Project**  
+> ** Pitch Project**  
 > **Tagline**: Offline-First AI-Powered Disaster Response & Emergency Coordination Ecosystem  
 > **Production Live Web App**: [https://rescueai-ai.vercel.app](https://rescueai-ai.vercel.app)  
 > **App Download Center**: [https://rescueai-ai.vercel.app/download](https://rescueai-ai.vercel.app/download)  
@@ -53,4 +53,4 @@ During major natural disasters (floods, tsunamis, earthquakes, fires), cellular 
 
 ---
 
-**Built with ❤️ for IEEE Hack Genesis 2026.**
+**Built with ❤️ .**

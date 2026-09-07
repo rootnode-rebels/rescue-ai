@@ -28,7 +28,7 @@ export const Footer: React.FC = () => {
                 Network Operational
               </span>
               <span>•</span>
-              <span>v1.0 Hackathon Build</span>
+              <span>v1.0 platform Build</span>
             </div>
           </div>
 

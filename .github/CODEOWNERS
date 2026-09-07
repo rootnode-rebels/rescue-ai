@@ -1,9 +1,7 @@
 ﻿# RescueAI Code Owners
 
 # Tier 1: Mandatory Code Reviewers
-# GitHub will automatically request reviews from these 3 members when a PR is opened.
 * @theakashr @theakshath @developerakashp
 
 # Tier 2: Final Approvers 
-# @developeradhi @suhashoskere @jeevanhs06 
-# (These members will manually approve/merge after the Tier 1 review is completed)
+* @developeradhi @suhashoskere @jeevanhs06 
