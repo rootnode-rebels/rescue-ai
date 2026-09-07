@@ -7,7 +7,11 @@
   "orientation": "any",
   "background_color": "#08101d",
   "theme_color": "#dc2626",
-  "categories": ["utilities", "medical", "social"],
+  "categories": [
+    "utilities",
+    "medical",
+    "social"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -20,6 +24,21 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "id": "/?source=pwa",
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ]
 }
