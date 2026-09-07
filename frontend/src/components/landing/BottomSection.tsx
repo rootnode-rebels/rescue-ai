@@ -119,7 +119,7 @@ export const BottomSection: React.FC = () => {
 
               <div className="mt-10 pt-4 border-t border-slate-100 text-xs font-semibold text-slate-500 flex items-center justify-between">
                 <span>Production Ready</span>
-                <span className="text-blue-600 font-bold">Hackathon Build</span>
+                <span className="text-blue-600 font-bold">platform Build</span>
               </div>
             </motion.div>
 

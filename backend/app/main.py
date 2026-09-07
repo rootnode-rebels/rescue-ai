@@ -6,7 +6,7 @@ from app.routers.triage import router as triage_router
 
 app = FastAPI(
     title="RescueAI API Engine",
-    description="Offline-First AI-Powered Disaster Response & Emergency Coordination Engine for IEEE Hack Genesis 2026",
+    description="Offline-First AI-Powered Disaster Response & Emergency Coordination Engine ",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -35,5 +35,5 @@ async def root_health_check():
         "service": "RescueAI FastAPI Engine",
         "version": "1.0.0",
         "ai_engine": "Google Gemini 1.5/2.0 API + Heuristic Fallback",
-        "hackathon": "IEEE Hack Genesis 2026",
+        "platform": "",
     }

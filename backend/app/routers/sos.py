@@ -12,7 +12,7 @@ from app.services.gemini_service import analyze_emergency_triage
 
 router = APIRouter(prefix="/api/sos", tags=["SOS Emergency Requests"])
 
-# In-memory database for hackathon demonstration
+# In-memory database for platform demonstration
 MOCK_SOS_DATABASE: List[dict] = [
     {
         "id": "SOS-9081",

@@ -150,7 +150,7 @@ export default function DownloadPage() {
 
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-800 px-6 py-6 text-center text-xs text-slate-500 font-mono">
-        RescueAI Mobile APK Distribution • Built for IEEE Hack Genesis 2026
+        RescueAI Mobile APK Distribution • Built 
       </footer>
     </div>
   );
